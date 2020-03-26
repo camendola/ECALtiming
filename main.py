@@ -25,12 +25,13 @@ if year ==2018: fileList = "filelists/ECALELF_Run2UL/Data_UL2018.log"
 
 files = [line. rstrip('\n') for line in open(fileList)]
 
-#files = files[:1]
+
 
 branches = ['runNumber','etaSCEle','phiSCEle',
 #             'xSeedSC','ySeedSC',
             'nPV',
-            'timeSeedSC','timeSecondToSeedSC'] #,'amplitudeSeedSC', 'amplitudeSecondToSeedSC','energySeedSC']
+            'timeSeedSC','timeSecondToSeedSC'] # ,'amplitudeSeedSC', 'amplitudeSecondToSeedSC']
+            #,'energySeedSC']
              #'laserSeedSC','alphaSeedSC']
 
 
@@ -44,11 +45,12 @@ print("entries = %d" % df_chain.shape[0])
 df_chain['deltaT_ee'] = df_chain['timeSeedSC[0]']-df_chain['timeSeedSC[1]']
 #df_chain['deltaT_ee_abs'] = abs(df_chain['timeSeedSC[0]']-df_chain['timeSeedSC[1]'])
 df_chain['deltaEta_ee'] = df_chain['etaSCEle[0]']-df_chain['etaSCEle[1]']
-#df_chain['deltaPhi_ee'] = df_chain['phiSCEle[0]']-df_chain['phiSCEle[1]']
-#df_chain['deltaPhi_ee'] = df['deltaPhi_ee'].apply(lambda x: {x + 6.28} if x < 3.14 else ({x - 6.28} if x > 3.14 else x))
+df_chain['deltaPhi_ee'] = df_chain['phiSCEle[0]']-df_chain['phiSCEle[1]']
+#df_chain['deltaPhi_ee'] = df_chain['deltaPhi_ee'].apply(lambda x: {x + 6.28} if x < 3.14 else ({x - 6.28} if x > 3.14 else x))
+df_chain['deltaT_e1_seeds'] = df_chain['timeSeedSC[0]']-df_chain['timeSecondToSeedSC[0]']
 #
-#
-#df_chain['deltaT_e1_seeds'] = df_chain['timeSeedSC[0]']-df_chain['timeSecondToSeedSC[0]']
+
+
 #df_chain['deltaA_e1_seeds'] = df_chain['amplitudeSeedSC[0]']-df_chain['amplitudeSecondToSeedSC[0]']
 
 
@@ -91,6 +93,7 @@ if config.hasOption("general::hvariables"):
             binning[0] = int(binning[0])
             plot = plt.hist(df[hvar], binning[0], range = binning[-2:])
             plot_root = pltToTH1(plot, hvar+'_'+sel)
+            plt.close()
             plot_root.Write()
     
     #if hvar in config.config['hoptions']:
@@ -106,7 +109,7 @@ if config.hasOption("general::hvariables2D"):
         hvarx, hvary, name = hvars.split(':')
         if name in config.config['hselections2D']:
             for k in dfs_dict:
-                if k in config.config['hselections'][hvars]: selections[k] = dfs_dict[k]
+                if k in config.config['hselections2D'][name]: selections[k] = dfs_dict[k]
         for sel, df in selections.items():
             
             if not "X@"+name in config.config['binning2D']: 
@@ -120,6 +123,7 @@ if config.hasOption("general::hvariables2D"):
             plot = plt.hist2d(df[hvarx], df[hvarx], bins = [xbinning[0],ybinning[0]], range = [xbinning[-2:], ybinning[-2:]])
             plot_root = pltToTH2(plot, name+'_'+sel)
             plot_root.Write()
+            plt.close()
 
 
 if config.hasOption("general::grvariables"):
@@ -147,9 +151,11 @@ if config.hasOption("general::grvariables"):
                             plot = aggr_graph.plot()
                             plot = pltToTGraph(plot,name+"_"+sel)
                             plot.Write()
+                            plt.close()
             else:
                 plot = df_chain.plot.scatter(xvar,yvar)
                 plot = pltToTGraph(plot,name)  
+                plt.close()
                 plot.Write()
     
 

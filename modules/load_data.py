@@ -7,7 +7,7 @@ def load_chain(ntuples, tree_name, branch):
     df = []
     for block in ntuples:
         print ('@ Loading file: ',block)
-        file_content = uproot.xrootd(block)
+        file_content = uproot.open(block)
         tree = file_content[tree_name]
         df_b = tree.pandas.df(branch)
         df.append(df_b)
