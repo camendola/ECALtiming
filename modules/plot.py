@@ -1,6 +1,7 @@
 import ROOT
 from array import array
-import numpy
+import numpy as np
+import pandas as pd
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
@@ -20,23 +21,25 @@ def outlier_aware_hist(data, nbins , hrange = []):
     else:
         upper_outliers = True
 
-    n, bins, patches = plt.hist(data, bins = nbins,range=(lower, upper))
-
+    bincontent, edge, patches = plt.hist(data, bins = nbins,range=(lower, upper))
+    
     if lower_outliers:
         n_lower_outliers = (data < lower).sum()
-        patches[0].set_height(patches[0].get_height() + n_lower_outliers)
+       
+        bincontent[0] = (bincontent[0] + n_lower_outliers)
         patches[0].set_label('Lower outliers: ({:.2f}, {:.2f})'.format(data.min(), lower))
-
+        print('Lower outliers: ({:.2f}, {:.2f}), n = {:.2f}'.format(data.min(), lower, n_lower_outliers))
     if upper_outliers:
         n_upper_outliers = (data > upper).sum()
-        patches[-1].set_height(patches[-1].get_height() + n_upper_outliers)
+        bincontent[-1] = (bincontent[-1] + n_upper_outliers)
         patches[-1].set_label('Upper outliers: ({:.2f}, {:.2f})'.format(upper, data.max()))
-
-    return [n,bins,patches]
+        print('Upper outliers: ({:.2f}, {:.2f}),  n = {:.2f}'.format(upper, data.max(), n_upper_outliers))
+    
+    return [bincontent,edge,patches]
 
 
 # conversion to ROOT
-def pltToTH1(plot, name=""):
+def plt_to_TH1(plot, name=""):
     print ("@ 1D hist: ", name) 
     bincontent, edge, patches = plot
     
@@ -49,11 +52,11 @@ def pltToTH1(plot, name=""):
     
     hist = ROOT.TH1F(name, name, nbins, xmin,xmax) 
     for bin,content in enumerate(bincontent):
-        hist.SetBinContent(bin, content)
+        hist.SetBinContent(bin+1, content)
     return hist
 
 
-def pltToTH2(plot, name=""):
+def plt_to_TH2(plot, name=""):
     print ("@ 2D hist: ", name) 
     bincontent, xedge, yedge, patches = plot
 
@@ -76,13 +79,54 @@ def pltToTH2(plot, name=""):
             hist.SetBinContent(i,j, bincontent[i,j])
     return hist
 
+def map_to_TH2(map, name):
+    print ("@ 2D map: ", name) 
+    bincontent, xedge, yedge, patches = plot
 
 
-def pltToTGraph(plot, name=""):
+    xbinsize = xedge[1]-xedge[0]
+    
+    xmin = xedge[0]
+    xmax = xedge[-1]
+    nxbins = int((xmax-xmin)/xbinsize)
+
+    ybinsize = yedge[1]-yedge[0]
+    
+    ymin = yedge[0]
+    ymax = yedge[-1]
+    nybins = int((ymax-ymin)/ybinsize)
+    hist = ROOT.TH2F(name, name, nxbins, xmin,xmax, nybins, ymin, ymax) 
+    for i in range(1, nxbins):
+        for j in range(1, nybins):
+            hist.SetBinContent(i,j, bincontent[i,j])
+    return hist
+
+def table_to_TH2(table, name):
+    print ("@ 2D map: ", name) 
+    table = table.fillna(0)
+    x = np.asarray(list(table.columns.values), dtype = np.float64)
+    y = np.asarray(list(table.index.values), dtype = np.float64)
+    hist = ROOT.TH2F(name, name, len(x)-1, x, len(y)-1, y) 
+
+    isPandas = False
+    if(len(table.columns.values) + 1 < 256): isPandas = True
+    i = 0
+    for row in table.itertuples():
+        for j , val in enumerate(list(table.columns.values)):
+            if isPandas: 
+                hist.SetBinContent(i+1,j+1,getattr(row, "_"+str(j+1)))
+            else: 
+                hist.SetBinContent(i+1,j+1,row[j]) 
+        i += 1
+
+    return hist
+
+def plt_to_TGraph(plot, name=""):
+    print ("@ graph: ", name) 
     x = plot.lines[0].get_xdata()
     y = plot.lines[0].get_ydata()
-    x = numpy.asarray(x,dtype=numpy.float64) 
-    y = numpy.asarray(y,dtype=numpy.float64) 
+    x = np.asarray(x,dtype=np.float64) 
+    y = np.asarray(y,dtype=np.float64) 
     
     graph = ROOT.TGraph(len(x), x , y)
     graph.SetName(name)

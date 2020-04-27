@@ -76,7 +76,7 @@ class cfg_reader:
         for i in range (0, len(line)) : line[i] = line[i].strip()
         #print(line)
         return line
-        
+
     def readMultiOption (self, optName) :
         """ read the config with the c++ style section::option and return a list of arguments for each option instance"""
         name = optName.split ('::')
