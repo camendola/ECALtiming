@@ -8,15 +8,6 @@ def Frame(gPad,width=2):
     gPad.RedrawAxis()
     l = ROOT.TLine()
     l.SetLineWidth(width)
-    #    if (not gPad.GetLogy()):
-    # top
-    #l.DrawLine(gPad.GetUxmin(), gPad.GetUymax(), gPad.GetUxmax(), gPad.GetUymax()) 
-    # right
-    #l.DrawLine(gPad.GetUxmax(), gPad.GetUymin(), gPad.GetUxmax(), gPad.GetUymax())
-    # bottom
-    #l.DrawLine(gPad.GetUxmin(), gPad.GetUymin(), gPad.GetUxmax(), gPad.GetUymin())
-    # left
-    #l.DrawLine(gPad.GetUxmin(), gPad.GetUymin(), gPad.GetUxmin(), gPad.GetUymax())
     lm = gPad.GetLeftMargin();
     rm = 1.-gPad.GetRightMargin();
     tm = 1.-gPad.GetTopMargin();
@@ -66,6 +57,13 @@ parser.add_argument('--legend', dest='legend', help='legend labels', default="al
 
 parser.add_argument('--norm', dest='norm', help='norm to 1', default=False, action='store_true')
 
+
+parser.add_argument('--logz', dest='logz', help='log z' , default=False, action='store_true')
+
+parser.add_argument('--zmin', dest='zmin',type = float, help='zmin', default=None)
+parser.add_argument('--zmax', dest='zmax',type = float, help='zmax', default=None)
+
+
 parser.add_argument('--name', dest='name', help='plot name', default=None)
 parser.add_argument('--xlabel', dest='xlabel', help='xlabel', default=None)
 parser.add_argument('--ylabel', dest='ylabel', help='ylabel', default=None)
@@ -74,26 +72,12 @@ parser.add_argument('--zlabel', dest='zlabel', help='zlabel', default=None)
 
 args = parser.parse_args()
 
-sel_colors = {
-    "all": ROOT.kBlue+1,
-    "EE": ROOT.kBlue+1,
-    "BB": ROOT.kGreen,
-    "EB": ROOT.kRed+1,
-    "E1_clean_e1": ROOT.kBlue+1,
-    "B1_clean_e1": ROOT.kRed+1,
-    "EE_clean_ee": ROOT.kBlue+1,
-    "BB_clean_ee": ROOT.kRed+1,
-    "EB_clean_ee": ROOT.kGreen,
-    "EE_clean_ee_outliers": ROOT.kBlue+1,
-    "BB_clean_ee_outliers": ROOT.kGreen,
-    "EB_clean_ee_outliers": ROOT.kRed+1
-    }
+sel_colors = [
+    ROOT.kBlue+1,
+    ROOT.kGreen,
+    ROOT.kRed+1
+    ]
 
-sel_year = {
-    "2016": ROOT.kBlue+1,
-    "2017": ROOT.kGreen+2,
-    "2018": ROOT.kMagenta+2
-    }   
 
 ROOT.gROOT.SetBatch(True)
 
@@ -139,8 +123,8 @@ else:
         ymax = max([p.GetMaximum() for p in plot])
         legend = ROOT.TLegend(0.65,0.7,0.89,0.89)
         for i, sel in enumerate(selections):
-            plot[i].SetLineWidth(2)
-            plot[i].SetLineColor(sel_colors[sel])
+            plot[i].SetLineWidth(2) 
+            plot[i].SetLineColor(sel_colors[i])
             if i == 0: 
                 plot[i].SetMaximum(ymax + ymax/10.)
                 plot[i].Draw("hist")                
@@ -169,12 +153,18 @@ else:
         c.SetRightMargin(0.15)
         h.Draw("colz")
         h.SetTitle("")
-
+        if args.logz: c.SetLogz(1)
         if args.xlabel: h.GetXaxis().SetTitle(args.xlabel)
         if args.ylabel: h.GetYaxis().SetTitle(args.ylabel)
         if args.zlabel: h.GetZaxis().SetTitle(args.zlabel)
+        print(h.GetMinimum, h.GetMaximum)
+        print(args.zmin, args.zmax)
+        if args.zmin: h.SetMinimum(args.zmin)
+        if args.zmax: h.SetMaximum(args.zmax)
+
         ROOT.gStyle.SetOptStat(0)
         Frame(gPad)
+        yrlabel = TextAuto(gPad, args.year, align = 31)
         c.Update()
 
     elif isinstance(plot[0], ROOT.TGraph):
@@ -189,6 +179,7 @@ else:
         if args.ylabel: gr.GetYaxis().SetTitle(args.ylabel)
 
         Frame(gPad) 
+        yrlabel = TextAuto(gPad, args.year, align = 31)
         c.Update()
 
     selname = ""

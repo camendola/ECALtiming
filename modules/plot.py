@@ -56,56 +56,50 @@ def plt_to_TH1(plot, name=""):
     return hist
 
 
+#def plt_to_TH2(plot, name=""):
+#    print ("@ 2D hist: ", name) 
+#    bincontent, xedge, yedge, patches = plot
+#    xbinsize = xedge[1]-xedge[0]
+#    
+#    xmin = xedge[0]
+#    xmax = xedge[-1]
+#    nxbins = int((xmax-xmin)/xbinsize)
+#
+#    ybinsize = yedge[1]-yedge[0]
+#    
+#    ymin = yedge[0]
+#    ymax = yedge[-1]
+#    nybins = int((ymax-ymin)/ybinsize)
+#
+#    hist = ROOT.TH2F(name, name, nxbins, xmin, xmax, nybins, ymin, ymax) 
+#    for i in range(1, nxbins):
+#        for j in range(1, nybins):
+#            hist.SetBinContent(i,j, bincontent[i,j])
+#    return hist
+
 def plt_to_TH2(plot, name=""):
     print ("@ 2D hist: ", name) 
     bincontent, xedge, yedge, patches = plot
+    x = np.asarray(xedge, dtype = np.float64)
+    y = np.asarray(yedge, dtype = np.float64)
 
-
-    xbinsize = xedge[1]-xedge[0]
-    
-    xmin = xedge[0]
-    xmax = xedge[-1]
-    nxbins = int((xmax-xmin)/xbinsize)
-
-    ybinsize = yedge[1]-yedge[0]
-    
-    ymin = yedge[0]
-    ymax = yedge[-1]
-    nybins = int((ymax-ymin)/ybinsize)
-
-    hist = ROOT.TH2F(name, name, nxbins, xmin,xmax, nybins, ymin, ymax) 
-    for i in range(1, nxbins):
-        for j in range(1, nybins):
-            hist.SetBinContent(i,j, bincontent[i,j])
+    hist = ROOT.TH2F(name, name, len(x)-1, x, len(y)-1, y) 
+    for i in range(0, len(x)-1):
+        for j in range(0, len(y)-1):
+            hist.SetBinContent(i+1,j+1, bincontent[i,j])
     return hist
 
-def map_to_TH2(map, name):
-    print ("@ 2D map: ", name) 
-    bincontent, xedge, yedge, patches = plot
-
-
-    xbinsize = xedge[1]-xedge[0]
-    
-    xmin = xedge[0]
-    xmax = xedge[-1]
-    nxbins = int((xmax-xmin)/xbinsize)
-
-    ybinsize = yedge[1]-yedge[0]
-    
-    ymin = yedge[0]
-    ymax = yedge[-1]
-    nybins = int((ymax-ymin)/ybinsize)
-    hist = ROOT.TH2F(name, name, nxbins, xmin,xmax, nybins, ymin, ymax) 
-    for i in range(1, nxbins):
-        for j in range(1, nybins):
-            hist.SetBinContent(i,j, bincontent[i,j])
-    return hist
 
 def table_to_TH2(table, name):
     print ("@ 2D map: ", name) 
     table = table.fillna(0)
     x = np.asarray(list(table.columns.values), dtype = np.float64)
     y = np.asarray(list(table.index.values), dtype = np.float64)
+    if x[0] < 0: x = x[1:]
+    if y[0] < 0: y = y[1:]
+    x = np.append(x, x[-1]+1)
+    y = np.append(y, y[-1]+1)
+
     hist = ROOT.TH2F(name, name, len(x)-1, x, len(y)-1, y) 
 
     isPandas = False
@@ -121,14 +115,19 @@ def table_to_TH2(table, name):
 
     return hist
 
-def plt_to_TGraph(plot, name=""):
+def plt_to_TGraph(plot, name="", labels = None, binwidth = None):
     print ("@ graph: ", name) 
     x = plot.lines[0].get_xdata()
     y = plot.lines[0].get_ydata()
+    if len(labels) > 0 : x = labels
     x = np.asarray(x,dtype=np.float64) 
     y = np.asarray(y,dtype=np.float64) 
+    if len(binwidth) > 0:
+        ex = np.asarray((binwidth[1:] - binwidth[:-1]) / 2, dtype=np.float64)
+
+        graph = ROOT.TGraphErrors(len(x), x , y, ex,    np.zeros(len(x)))
+    else:
+        graph = ROOT.TGraph(len(x), x , y)
     
-    graph = ROOT.TGraph(len(x), x , y)
     graph.SetName(name)
     return graph
-

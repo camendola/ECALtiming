@@ -20,9 +20,9 @@ args = parser.parse_args()
 
 
 year_sel = {
-    "2016": [ROOT.kBlue+1,  ROOT.kAzure+2,    ROOT.kCyan],
-    "2017": [ROOT.kRed + 2, ROOT.kOrange +10, ROOT.kOrange +2],
-    "2018": [ROOT.kGreen+4, ROOT.kGreen+2 ,   ROOT.kSpring]
+    "2016": [ROOT.kBlue+1,  ROOT.kAzure+2,    ROOT.kCyan, ROOT.kCyan -2],
+    "2017": [ROOT.kRed + 2, ROOT.kOrange +10, ROOT.kOrange +2, ROOT.kOrange -1],
+    "2018": [ROOT.kGreen+4, ROOT.kGreen+2 ,   ROOT.kSpring, ROOT.kSpring -2]
 }   
 
 ROOT.gROOT.SetBatch(True)
@@ -36,9 +36,9 @@ selections = [item for item in args.sel.split(',')]
 if args.legend:
     leg_labels = [item for item in args.legend.split(',')]
 else:
-    leg_labels = selections
+    leg_labels = selections 
 
-inFile = {}
+inFile = {} 
 mg = ROOT.TMultiGraph()   
 c = ROOT.TCanvas("c","c",1200, 600)
 leg = ROOT.TLegend(0.11, 0.7, 0.5, 0.89)
