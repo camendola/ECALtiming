@@ -8,7 +8,7 @@ parser.add_argument('--sel', dest='sel', help='selection(s)', default="all")
 parser.add_argument('--legend', dest='legend', help='legend labels', default="all")
 
 parser.add_argument('--norm', dest='norm', help='norm to 1', default=False, action='store_true')
-
+parser.add_argument('--sigma', dest='sigma', help='use sigma folder', default=False, action='store_true')
 parser.add_argument('--name', dest='name', help='plot name', default=None)
 parser.add_argument('--xlabel', dest='xlabel', help='xlabel', default=None)
 parser.add_argument('--ylabel', dest='ylabel', help='ylabel', default=None)
@@ -45,7 +45,10 @@ leg = ROOT.TLegend(0.11, 0.7, 0.5, 0.89)
 leg.SetNColumns(3)       
 plots = []
 for yr in years:
-    inFile[yr] = ROOT.TFile.Open("plots/"+args.tag+"/outPlot_"+yr+".root")
+    if args.sigma:
+        inFile[yr] = ROOT.TFile.Open("plots_sigma/"+args.tag+"/outPlot_"+yr+".root")
+    else:
+        inFile[yr] = ROOT.TFile.Open("plots/"+args.tag+"/outPlot_"+yr+".root")
     #print(inFile[yr].ls())
 
     for i,sel in enumerate(selections):
@@ -86,6 +89,9 @@ c.Update()
 selname = ""
 for i in selections:
     selname = selname+"_"+i
-
-c.SaveAs("plots/"+args.tag+"/allYears/"+args.name+selname+".png")
-c.SaveAs("plots/"+args.tag+"/allYears/"+args.name+selname+".pdf")
+if args.sigma:
+    c.SaveAs("plots_sigma/"+args.tag+"/allYears/"+args.name+selname+".png")
+    c.SaveAs("plots_sigma/"+args.tag+"/allYears/"+args.name+selname+".pdf")
+else:
+    c.SaveAs("plots/"+args.tag+"/allYears/"+args.name+selname+".png")
+    c.SaveAs("plots/"+args.tag+"/allYears/"+args.name+selname+".pdf")

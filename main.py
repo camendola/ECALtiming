@@ -69,10 +69,9 @@ if debug:
 
 branches = ['runNumber','etaSCEle','phiSCEle',
             'xSeedSC','ySeedSC',
-            'nPV','nBX', 'vtxX', 'vtxZ','vtxY',
-            'fbremEle', 'R9Ele', 'ZEvent','eleID', 
+            'R9Ele', 'ZEvent','eleID', 
             'timeSeedSC','timeSecondToSeedSC','amplitudeSeedSC', 'amplitudeSecondToSeedSC',
-            'rawEnergySCEle',
+            'energySeedSC', 'energySecondToSeedSC',
             'noiseSeedSC', 
             'laserSeedSC','alphaSeedSC', 'chargeEle', 'invMass', 'gainSeedSC']
 
@@ -109,19 +108,19 @@ df_chain['deltaA_e2_seeds'] = df_chain['amplitudeSeedSC[1]']-df_chain['amplitude
 
 
 df_chain['effA_ee'] = compute.effective_amplitude(df_chain['amplitudeSeedSC[0]'],
-                                                        1.5,
+                                                        df_chain['noiseSeedSC[0]'],
                                                         df_chain['amplitudeSeedSC[1]'],
-                                                        1.5)
+                                                        df_chain['noiseSeedSC[1]'])
 
 df_chain['effA_e1_seeds'] = compute.effective_amplitude(df_chain['amplitudeSeedSC[0]'],
-                                                        1.5,
+                                                        df_chain['noiseSeedSC[0]'],
                                                         df_chain['amplitudeSecondToSeedSC[0]'],
-                                                        1.5)
+                                                        df_chain['noiseSeedSC[0]'])
 
 df_chain['effA_e2_seeds'] = compute.effective_amplitude(df_chain['amplitudeSeedSC[1]'],
-                                                        1.5,
+                                                        df_chain['noiseSeedSC[1]'],
                                                         df_chain['amplitudeSecondToSeedSC[1]'],
-                                                        1.5)
+                                                        df_chain['noiseSeedSC[1]'])
 #df_chain['responseSeedSC1'] = compute.relative_response(df_chain['laserSeedSC[0]'],df_chain['alphaSeedSC[0]'])
 #df_chain['responseSeedSC2'] = compute.relative_response(df_chain['laserSeedSC[1]'],df_chain['alphaSeedSC[1]'])
 

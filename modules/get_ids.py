@@ -2,20 +2,31 @@ import pandas as pd
 import numpy as np
 
 
-df_TRT = pd.read_csv("modules/utils/TRT.csv")
 
+df_TRT = pd.read_csv("modules/utils/TRT.csv", comment='#')
 df_TRT["TTs"] = df_TRT["TTs"].str.split()
-print(df_TRT)
+df_TRT = df_TRT.join(df_TRT.TTs.apply(pd.Series)).drop('TTs', 1).set_index([u'Subdetector', u'FED' , u'TR' , u'Dee', u'Sector', u'DRing']).stack().reset_index().drop('level_6', 1).rename(columns={0:'TTs'})
+df_TRT = df_TRT.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
+
+def twos_comp(val, bits):
+    return np.where(val < 0, val + (1 << bits), val)
+
+DetMask = 0xF;
+#ECAL = 1
+SubdetMask = 0x7;
+#EB = 1
+#EE = 2
 
 #BARREL
 #https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EBDetId.h
-
 def getEBDetId(ieta, iphi): 
 	#https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EcalSubdetector.h
-	id = (((3 & 0xF) << 28) | ((1 & 0x7) << 28)) # not needed for now
-	id = id | (0x10000 | np.where((ieta.values > 0),(ieta.values<< 9), (-ieta.values) << 9)) | (iphi.values &  0x1FF)
+	id_det = (((3 & DetMask) << 28) | ((1 & SubdetMask) << 25)) 
+	id = ((np.where((ieta.values > 0),(0x10000 | (ieta.values << 9)), (-ieta.values) << 9)) | (iphi.values &  0x1FF))
+	#id_ |= ((crystal_ieta > 0) ? (0x10000 | (crystal_ieta << 9)) : ((-crystal_ieta) << 9)) | (crystal_iphi & 0x1FF);
+	id = twos_comp(id,17)
+	id = id_det | id 
 
-	id.astype('int')
 	return id
 
 def geticEB(ieta, iphi, iz):
@@ -53,7 +64,7 @@ def iphiTTEB(iphi):
 	return np.where((iphi_simple <= 0), iphi_simple + 72,  iphi_simple).astype('int')
 
 
-#https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/src/EcalTrigTowerDetId.cc
+#	https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/src/EcalTrigTowerDetId.cc
 def iTTEB(ietaAbsTT, iphiTT, iz):
 	EBTowersInPhi = 4   # per SM
 	ie = ietaAbsTT - 1
@@ -66,20 +77,20 @@ def iTTEB(ietaAbsTT, iphiTT, iz):
 	return (ie * EBTowersInPhi) + ip
 
 def VFE_EB(ieta):
-	return ieta.astype('int') % 5
+	ie = abs(ieta)
+	ieInTT = (ie.astype('int') % 17) + 1
+	return (ieInTT.astype('int') % 5) +1
 
-def TRT(iTT):
-	print(dict(zip(df_TRT["TRT"], df_TRT["TTs"][0])))
-	TR = iTT.astype('int').map(dict(zip(df_TRT["TTs"].any(),df_TRT["TRT"])))
-	print(TR.tail())
+def TRT(iTT, isEB):
+	TR = np.where(isEB, 
+		 #TR = iTT.fillna(1).astype('int').map((df_TRT[['TTs','TR']].astype('int').set_index(['TTs'])['TR'])) # magic spell
+		 iTT.fillna(1).astype('int').map((df_TRT[(df_TRT['Subdetector'] == 'BARREL')][['TTs','TR']].astype('int').set_index(['TTs'])['TR'])), np.nan)
 	return TR
 
 def multipleIdxs(df, idxs):
 	s = ":"
 	return df[idxs].astype('str').agg('-'.join, axis=1)
 
-#
-#def TRT_SM_EB(iTT, SM):
 
 
 # ENDCAPS
@@ -90,7 +101,8 @@ np_QuadColLimits = np.asarray(QuadColLimits)
 
 #https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EEDetId.h
 def getEEDetId(ix, iy, iz): 
-	id = (iy & 0x7f) | ((iy & 0x7f) << 7) | np.where((iz.values > 0), 0x4000, 0)
+	id = (((3 & DetMask) << 28) | ((2 & SubdetMask) << 25)) 
+	id = id | (iy.values & 0x7f) | ((ix.values & 0x7f) << 7) | np.where((iz > 0), 0x4000, 0)
 	return id
 
 def iquadrant(ix, iy):
@@ -140,10 +152,12 @@ def appendIdxs(df, pair_idx):
 
 
 	isEB = abs(df[eta]) < 1.479
+	#isEB = df["ZRecHitSCEle"+pair_idx] == 0
 
-	df["EcalDetIDSeedSC"+pair_idx] = np.where(isEB, getEBDetId(df[ieta], df[iphi]), int(0))
+	df["EcalDetIDSeedSC"+pair_idx] = np.where(isEB, getEBDetId(df[ieta], df[iphi]), getEEDetId(df[ix], df[iy],iz_col))
 
-	df["icrSeedSC"+pair_idx]       = np.where(isEB, geticEB(df[ieta], df[iphi], iz_col),        np.nan)
+
+	df["icSeedSC"+pair_idx]       = np.where(isEB, geticEB(df[ieta], df[iphi], iz_col),        np.nan)
 	df["scSeedSC"+pair_idx]        = np.where(isEB, getSM(df[iphi],iz_col),       getSC(df[ix],df[iy],isEB)) #SM for EB, SC for EE
 	
 	df["ietaphiSeedSC"+pair_idx]   = np.where(isEB, numberByEtaPhiEB(df[ieta],df[iphi],iz_col), np.nan)
@@ -154,14 +168,7 @@ def appendIdxs(df, pair_idx):
 	iphiTT_col                         = np.where(isEB, iphiTTEB(df[iphi]),                          np.nan)
 
 	df["iTTSeedSC"+pair_idx]           = np.where(isEB, iTTEB(ietaAbsTT_col,iphiTT_col, iz_col),     np.nan)
-	df["VFESeedSC"+pair_idx]           = np.where(isEB, VFE_EB(ietaAbsTT_col),     np.nan)
-
-	#df["iTT_VFESeedSC"+pair_idx]       = multipleIdxs(df, ["iTTSeedSC"+pair_idx, "VFESeedSC"+pair_idx])
-	#df["sm_iTT_VFESeedSC"+pair_idx]    = multipleIdxs(df, ["smSeedSC"+pair_idx,"iTTSeedSC"+pair_idx,"VFESeedSC"+pair_idx])
-	#df["sm_iTTSeedSC"+pair_idx]        = multipleIdxs(df, ["smSeedSC"+pair_idx,"iTTSeedSC"+pair_idx])
-
-	#df["TRTSeedSC"+pair_idx]           = np.where(isEB, TRT(df["iTTSeedSC"+pair_idx]),     np.nan)
-
-	#print(df[["TRTSeedSC"+pair_idx, "iTTSeedSC"+pair_idx]].tail())
+	df["VFESeedSC"+pair_idx]           = np.where(isEB, VFE_EB(df[ieta]),     np.nan)
+	df["TRTSeedSC"+pair_idx]           = np.where(isEB, TRT(df["iTTSeedSC"+pair_idx], isEB),     np.nan)
 
 	return df
