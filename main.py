@@ -13,6 +13,8 @@ import matplotlib as mpl
 import matplotlib.pyplot as plt
 
 
+import modules.classes as obj
+
 import pandas as pd
 
 import ROOT
@@ -121,6 +123,7 @@ df_chain['effA_e2_seeds'] = compute.effective_amplitude(df_chain['amplitudeSeedS
                                                         df_chain['noiseSeedSC[1]'],
                                                         df_chain['amplitudeSecondToSeedSC[1]'],
                                                         df_chain['noiseSeedSC[1]'])
+
 #df_chain['responseSeedSC1'] = compute.relative_response(df_chain['laserSeedSC[0]'],df_chain['alphaSeedSC[0]'])
 #df_chain['responseSeedSC2'] = compute.relative_response(df_chain['laserSeedSC[1]'],df_chain['alphaSeedSC[1]'])
 
@@ -137,10 +140,10 @@ outFile = ROOT.TFile.Open("plots/"+str(tag)+"/outPlot_"+str(year)+".root","RECRE
 
 config = config_reader.cfg_reader(args.cfg)
 
-hvarList  = config.readListOption("general::hvariables")
+hvarList    = config.readListOption("general::hvariables")
 hvar2DList  = config.readListOption("general::hvariables2D")
-grList  = config.readListOption("general::grvariables")
-mapList  = config.readListOption("general::mvariables")
+grList      = config.readListOption("general::grvariables")
+mapList     = config.readListOption("general::mvariables")
 
 toPlot = []
 if hvarList:
@@ -161,43 +164,26 @@ if mapList:
         mvarx, mvary, mvarz = mvars.split(':')
         toPlot.append(mvarx)
         toPlot.append(mvary)    
+        toPlot.append(mvarz)
 
 for var in toPlot:
     if not var in df_chain:
         print("### ERROR: missing variable: "+ var)
         sys.exit()
 
-if config.hasOption("general::hvariables"):
-    for hvar in hvarList:
-        binning = []
-        if not hvar in config.config['binning']: 
-            print("### WARNING: no binning provided for ", hvar, ", using dummy")
-        else:
-            binning = [float(s) for s in config.config['binning'][hvar].split(",")]
-            binning[0] = int(binning[0])
-        if hvar in config.config["hselections"]: 
-            hselections = config.readOption("hselections::"+hvar).split(",")
-        else:
-            hselections = ["all"]
-        for hselection in hselections:
-            hselection = hselection.strip()
-            df_this = select.apply_selection(df_chain,hselection)
-            if len(binning) > 0:
-                plot = plt.hist(df_this[hvar], binning[0], range = binning[-2:])
-            else: 
-                plot = plt.hist(df_this[hvar])
-            plot_root = plt_to_TH1(plot, hvar+'_'+hselection.replace('-',"_"))
-            plot_root.Write()
-            plt.close()
-            if hvar in config.config['hoptions']:
-                if "outliers" in config.config['hoptions'][hvar]:
-                    if len(binning) > 0:
-                        plot_outliers = outlier_aware_hist(df_chain[hvar], binning[0], binning[-2:])
-                        plot_root = plt_to_TH1(plot_outliers, hvar+'_'+hselection.replace('-',"_")+'_outliers')
-                        plot_root.Write()   
-                    else: 
-                        print("### WARNING: no binning provided for ", hvar, ", skipping underflow/overflow histogram")
-            del df_this
+### 1D histograms
+for hvar in hvarList:
+    h = obj.histo1D(hvar,config)
+    for s in h.selections: 
+        s_name = hvar+'_'+s.replace('-',"_")
+        df_this = select.apply_selection(df_chain, s)
+        plot_root = plt_to_TH1(h.plot(df_this), s_name)
+        plot_root.Write()
+        plt.close()
+        if "outliers" in h.options: 
+            plot_root = plt_to_TH1(h.outlier_aware_hist(df_this), s_name+'_outliers')
+            if plot_root: plot_root.Write()
+        del df_this
 
 if config.hasOption("general::hvariables2D"):
     for hvars in hvar2DList:

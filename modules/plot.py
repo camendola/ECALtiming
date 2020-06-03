@@ -6,37 +6,6 @@ import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-# matplotlib
-def outlier_aware_hist(data, nbins , hrange = []):
-    lower , upper = hrange
-    if not lower or (lower < (data.min())):
-        lower = data.min()
-        lower_outliers = False
-    else:
-        lower_outliers = True
-
-    if not upper or upper > data.max():
-        upper = data.max()
-        upper_outliers = False
-    else:
-        upper_outliers = True
-
-    bincontent, edge, patches = plt.hist(data, bins = nbins,range=(lower, upper))
-    
-    if lower_outliers:
-        n_lower_outliers = (data < lower).sum()
-       
-        bincontent[0] = (bincontent[0] + n_lower_outliers)
-        patches[0].set_label('Lower outliers: ({:.2f}, {:.2f})'.format(data.min(), lower))
-        print('Lower outliers: ({:.2f}, {:.2f}), n = {:.2f}'.format(data.min(), lower, n_lower_outliers))
-    if upper_outliers:
-        n_upper_outliers = (data > upper).sum()
-        bincontent[-1] = (bincontent[-1] + n_upper_outliers)
-        patches[-1].set_label('Upper outliers: ({:.2f}, {:.2f})'.format(upper, data.max()))
-        print('Upper outliers: ({:.2f}, {:.2f}),  n = {:.2f}'.format(upper, data.max(), n_upper_outliers))
-    
-    return [bincontent,edge,patches]
-
 
 # conversion to ROOT
 def plt_to_TH1(plot, name=""):
@@ -55,27 +24,6 @@ def plt_to_TH1(plot, name=""):
         hist.SetBinContent(bin+1, content)
     return hist
 
-
-#def plt_to_TH2(plot, name=""):
-#    print ("@ 2D hist: ", name) 
-#    bincontent, xedge, yedge, patches = plot
-#    xbinsize = xedge[1]-xedge[0]
-#    
-#    xmin = xedge[0]
-#    xmax = xedge[-1]
-#    nxbins = int((xmax-xmin)/xbinsize)
-#
-#    ybinsize = yedge[1]-yedge[0]
-#    
-#    ymin = yedge[0]
-#    ymax = yedge[-1]
-#    nybins = int((ymax-ymin)/ybinsize)
-#
-#    hist = ROOT.TH2F(name, name, nxbins, xmin, xmax, nybins, ymin, ymax) 
-#    for i in range(1, nxbins):
-#        for j in range(1, nybins):
-#            hist.SetBinContent(i,j, bincontent[i,j])
-#    return hist
 
 def plt_to_TH2(plot, name=""):
     print ("@ 2D hist: ", name) 
@@ -124,7 +72,6 @@ def plt_to_TGraph(plot, name="", labels = None, binwidth = None):
     y = np.asarray(y,dtype=np.float64) 
     if len(binwidth) > 0:
         ex = np.asarray((binwidth[1:] - binwidth[:-1]) / 2, dtype=np.float64)
-
         graph = ROOT.TGraphErrors(len(x), x , y, ex,    np.zeros(len(x)))
     else:
         graph = ROOT.TGraph(len(x), x , y)
