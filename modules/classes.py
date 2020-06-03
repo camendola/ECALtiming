@@ -71,3 +71,47 @@ class histo1D:
 			print('Upper outliers: ({:.2f}, {:.2f}),  n = {:.2f}'.format(upper, data.max(), n_upper_outliers))
 	
 		return [bincontent,edge,patches]
+
+
+
+class histo2D:
+	def __init__(self, var, config):
+		varx, vary, name = var.split(':')
+		self.varx = varx.strip()
+		self.vary = vary.strip()
+		self.name = name.strip()
+		self.xbinning, self.xcustom    = self.get_binning(config, "X")
+		self.ybinning, self.ycustom    = self.get_binning(config, "Y")
+		self.selections = self.get_selections(config)
+
+
+	def get_binning(self,config,axis):
+		if not axis+"@"+self.name in config.config['binning2D']: 
+			print("### WARNING: no "+axis+" binning provided for ", self.name, ", skipping")
+		binning = [float(s) for s in config.config['binning2D'][axis+"@"+self.name].split(",")]
+		binning[0] = int(binning[0])
+		custom = False
+		if axis+"@"+self.name in config.config['custom_binning2D']: 
+			custom = True
+			binning = [float(s) for s in config.config['custom_binning2D'][axis+"@"+self.name].split(",")]
+		return binning, custom
+		
+	def get_selections(self, config):
+		if self.name in config.config["hselections2D"]: 
+			selections = config.readOption("hselections2D::"+self.name).split(",")
+		else:
+			selections = ["all"]
+		return [sel.strip() for sel in selections]
+
+	def plot(self, df):
+		if self.xcustom:
+			if self.ycustom :
+				plot = plt.hist2d(df[self.varx], df[self.vary], bins = [self.xbinning,self.ybinning])
+			else:
+				plot = plt.hist2d(df[self.varx], df[self.vary], bins = [self.xbinning,self.ybinning[0]], range = [[self.xbinning[0], self.xbinning[-1]], self.ybinning[-2:]])
+		else:
+			if self.ycustom:
+				plot = plt.hist2d(df[self.varx], df[self.vary], bins = [self.xbinning[0],self.ybinning], range = [self.xbinning[-2:], [self.ybinning[0], self.ybinning[-1]]])
+			else:
+				plot = plt.hist2d(df[self.varx], df[self.vary], bins = [self.xbinning[0],self.ybinning[0]], range = [self.xbinning[-2:], self.ybinning[-2:]])
+		return plot

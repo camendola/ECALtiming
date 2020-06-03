@@ -175,7 +175,7 @@ for var in toPlot:
 for hvar in hvarList:
     h = obj.histo1D(hvar,config)
     for s in h.selections: 
-        s_name = hvar+'_'+s.replace('-',"_")
+        s_name = h.var+'_'+s.replace('-',"_")
         df_this = select.apply_selection(df_chain, s)
         plot_root = plt_to_TH1(h.plot(df_this), s_name)
         plot_root.Write()
@@ -185,49 +185,17 @@ for hvar in hvarList:
             if plot_root: plot_root.Write()
         del df_this
 
-if config.hasOption("general::hvariables2D"):
-    for hvars in hvar2DList:
-        hvarx, hvary, name = hvars.split(':')
-        if not "X@"+name in config.config['binning2D']: 
-            print("### WARNING: no x binning provided for ", name, ", skipping")
-            continue
-        if not "Y@"+name in config.config['binning2D']: 
-            print("### WARNING: no y binning provided for ", name, ", skipping")
-            continue
-        xbinning = [float(s) for s in config.config['binning2D']["X@"+name].split(",")]
-        ybinning = [float(s) for s in config.config['binning2D']["Y@"+name].split(",")]
-        xbinning[0] = int(xbinning[0])
-        ybinning[0] = int(ybinning[0])
-        xcustom = False
-        ycustom = False
-        if "X@"+name in config.config['custom_binning2D']: 
-            xcustom = True
-            xbinning = [float(s) for s in config.config['custom_binning2D']["X@"+name].split(",")]
-        if "Y@"+name in config.config['custom_binning2D']: 
-            ycustom = True
-            ybinning = [float(s) for s in config.config['custom_binning2D']["Y@"+name].split(",")]
-        if name in config.config["hselections2D"]: 
-            hselections = config.readOption("hselections2D::"+name).split(",")
-        else:
-            hselections = ["all"]
-        for hselection in hselections:
-            hselection = hselection.strip()    
-            df_this = select.apply_selection(df_chain, hselection)
-            if xcustom:
-                if ycustom :
-                    plot = plt.hist2d(df_this[hvarx], df_this[hvary], bins = [xbinning,ybinning])
-                else:
-                    plot = plt.hist2d(df_this[hvarx], df_this[hvary], bins = [xbinning,ybinning[0]], range = [[xbinning[0], xbinning[-1]], ybinning[-2:]])
-            else:
-                if ycustom:
-                    plot = plt.hist2d(df_this[hvarx], df_this[hvary], bins = [xbinning[0],ybinning], range = [xbinning[-2:], [ybinning[0], ybinning[-1]]])
-                else:
-                    plot = plt.hist2d(df_this[hvarx], df_this[hvary], bins = [xbinning[0],ybinning[0]], range = [xbinning[-2:], ybinning[-2:]])
-            del df_this
+### 2D histograms
+for hvars in hvar2DList:
+    h = obj.histo2D(hvars, config)
+    for s in h.selections:
+        s_name = h.name+'_'+s.replace('-',"_")
+        df_this = select.apply_selection(df_chain, s)
+        plot_root = plt_to_TH2(h.plot(df_this), s_name)
+        plot_root.Write()
+        plt.close()
+        del df_this
 
-            plot_root = plt_to_TH2(plot, name+'_'+hselection.replace('-',"_"))
-            plot_root.Write()
-            plt.close()
 
 
 if config.hasOption("general::grvariables"):
