@@ -25,4 +25,4 @@ def load_file(ntuple, tree_name, branch, firsthit = False):
     tree = file_content[tree_name]
     df_b = tree.pandas.df(branch, flatten = False)
     if firsthit: df_b = df_b.stack().str[0].unstack()
-    return df_b
+    return df_b, file_content
