@@ -11,6 +11,7 @@ df_TRT = df_TRT.apply(lambda x: x.str.strip() if x.dtype == "object" else x)
 def twos_comp(val, bits):
     return np.where(val < 0, val + (1 << bits), val)
 
+#https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EcalSubdetector.h
 DetMask = 0xF;
 #ECAL = 1
 SubdetMask = 0x7;
@@ -20,36 +21,33 @@ SubdetMask = 0x7;
 #BARREL
 #https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EBDetId.h
 def getEBDetId(ieta, iphi): 
-	#https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EcalSubdetector.h
 	id_det = (((3 & DetMask) << 28) | ((1 & SubdetMask) << 25)) 
 	id = ((np.where((ieta.values > 0),(0x10000 | (ieta.values << 9)), (-ieta.values) << 9)) | (iphi.values &  0x1FF))
-	#id_ |= ((crystal_ieta > 0) ? (0x10000 | (crystal_ieta << 9)) : ((-crystal_ieta) << 9)) | (crystal_iphi & 0x1FF);
 	id = twos_comp(id,17)
 	id = id_det | id 
-
 	return id
 
-def geticEB(ieta, iphi, iz):
+def geticEB(ieta, iphi, positiveZ):
 	crystalsInPhi = 20 #per SM
 	crystalsInEta = 85 #per SM
 	crystalsPerSM = 1700
 	ie = abs(ieta) - 1
-	ic = (ie * crystalsInPhi) + np.where(iz > 0,
+	ic = (ie * crystalsInPhi) + np.where(positiveZ,
 		(crystalsInPhi - ((iphi - 1) % crystalsInPhi)),
 		((iphi - 1) % crystalsInPhi + 1))
 	return ic
 
-def getSM(iphi, iz):
+def getSM(iphi, positiveZ):
 	crystalsInPhi = 20 #per SM
 	id = (iphi - 1)/ crystalsInPhi + 1
 	id = id.astype('int')
-	return np.where(iz > 0 , id, id + 18)
- 
-def numberByEtaPhiEB(ieta, iphi, iz):
+	return np.where(positiveZ, id, id + 18)
+
+def numberByEtaPhiEB(ieta, iphi, positiveZ):
 	ie = abs(ieta)
 	crystalsInPhi = 360
 	crystalsInEta = 85
-	n = (crystalsInEta + np.where(iz > 0, ie - 1, -ie)) * crystalsInPhi + iphi - 1; 
+	n = (crystalsInEta + np.where(positiveZ, ie - 1, -ie)) * crystalsInPhi + iphi - 1; 
 	return n 
 
 def ietaAbsTTEB(ieta):
@@ -65,7 +63,7 @@ def iphiTTEB(iphi):
 
 
 #	https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/src/EcalTrigTowerDetId.cc
-def iTTEB(ietaAbsTT, iphiTT, iz):
+def iTTEB(ietaAbsTT, iphiTT, positiveZ):
 	EBTowersInPhi = 4   # per SM
 	ie = ietaAbsTT - 1
 
@@ -73,7 +71,7 @@ def iTTEB(ietaAbsTT, iphiTT, iz):
 	iphi_simple = iphi_simple.astype('int')
 	iphi_simple = np.where(iphi_simple > 72, iphi_simple % 72, iphi_simple)
 
-	ip = np.where(iz > 0, EBTowersInPhi - ((iphi_simple - 1) % EBTowersInPhi), ((iphi_simple - 1) % EBTowersInPhi) + 1)
+	ip = np.where(positiveZ > 0, EBTowersInPhi - ((iphi_simple - 1) % EBTowersInPhi), ((iphi_simple - 1) % EBTowersInPhi) + 1)
 	return (ie * EBTowersInPhi) + ip
 
 def VFE_EB(ieta):
@@ -83,14 +81,8 @@ def VFE_EB(ieta):
 
 def TRT(iTT, isEB):
 	TR = np.where(isEB, 
-		 #TR = iTT.fillna(1).astype('int').map((df_TRT[['TTs','TR']].astype('int').set_index(['TTs'])['TR'])) # magic spell
 		 iTT.fillna(1).astype('int').map((df_TRT[(df_TRT['Subdetector'] == 'BARREL')][['TTs','TR']].astype('int').set_index(['TTs'])['TR'])), np.nan)
 	return TR
-
-def multipleIdxs(df, idxs):
-	s = ":"
-	return df[idxs].astype('str').agg('-'.join, axis=1)
-
 
 
 # ENDCAPS
@@ -100,14 +92,13 @@ QuadColLimits = [0, 8, 17, 27, 36, 45, 54, 62, 70, 76, 79]
 np_QuadColLimits = np.asarray(QuadColLimits)
 
 #https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EEDetId.h
-def getEEDetId(ix, iy, iz): 
+def getEEDetId(ix, iy, positiveZ): 
 	id = (((3 & DetMask) << 28) | ((2 & SubdetMask) << 25)) 
-	id = id | (iy.values & 0x7f) | ((ix.values & 0x7f) << 7) | np.where((iz > 0), 0x4000, 0)
+	id = id | (iy.values & 0x7f) | ((ix.values & 0x7f) << 7) | np.where(positiveZ, 0x4000, 0)
 	return id
 
 def iquadrant(ix, iy):
 	return np.where(ix.values > 50, np.where(iy.values > 50 , 1, 4), np.where(iy.values > 50 , 2, 3))
-
 
 def getSC(ix, iy,isEB):
 	
@@ -123,14 +114,6 @@ def getSC(ix, iy,isEB):
 	icol = icol.astype('int')
 	icol = np.where(icol < 11, icol, int(1))
 
-	#print("iquad, ix, iy, jx, jy, isEB")
-	#print(iquad[1120503], ix[1120503], iy[1120503], jx[1120503], jy[1120503],isEB[1120503])
-	#print(np.where(icol > 10))
-	#disptest = pd.DataFrame(data = [icol[:1000000],iquad[:1000000], ix[:1000000], iy[:1000000], jx[:1000000], jy[:1000000]]).T
-	#disptest.columns = ["icol", "iquad", "ix", "iy", "jx", "jy"]
-
-	#print(disptest[(disptest["icol"] > 10)])
-
 	maxCinSC = 316
 	nSCinQuadrant = maxCinSC / 4; #max SC = 316
 
@@ -142,33 +125,37 @@ def getSC(ix, iy,isEB):
 
 
 
-def appendIdxs(df, pair_idx):
-	eta = "etaSCEle"+pair_idx
-	iz_col = np.where(df[eta] > 0, 1, -1)
-	ix = "xSeedSC"+pair_idx
-	iy = "ySeedSC"+pair_idx
+def appendIdxs(df, pair_idx, seed = "Seed"):
+	ix = "x"+seed+"SC"+pair_idx
+	iy = "y"+seed+"SC"+pair_idx
+	iz = "z"+seed+"SC"+pair_idx
+
 	ieta = ix
 	iphi = iy
+	isEB = (df[iz] == 0)
 
 
-	isEB = abs(df[eta]) < 1.479
-	#isEB = df["ZRecHitSCEle"+pair_idx] == 0
+	df["EcalDetID"+seed+"SC"+pair_idx] = np.where(isEB, getEBDetId(df[ieta], df[iphi]), getEEDetId(df[ix], df[iy], df[iz]))
 
-	df["EcalDetIDSeedSC"+pair_idx] = np.where(isEB, getEBDetId(df[ieta], df[iphi]), getEEDetId(df[ix], df[iy],iz_col))
-
-
-	df["icSeedSC"+pair_idx]       = np.where(isEB, geticEB(df[ieta], df[iphi], iz_col),        np.nan)
-	df["scSeedSC"+pair_idx]        = np.where(isEB, getSM(df[iphi],iz_col),       getSC(df[ix],df[iy],isEB)) #SM for EB, SC for EE
+	#positiveZ()
+	#https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EBDetId.h#L76
+	#https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EEDetId.h#L174
 	
-	df["ietaphiSeedSC"+pair_idx]   = np.where(isEB, numberByEtaPhiEB(df[ieta],df[iphi],iz_col), np.nan)
+	positiveZ_col = np.where(isEB, df["EcalDetID"+seed+"SC"+pair_idx].values & 0x10000, df["EcalDetID"+seed+"SC"+pair_idx].values & 0x4000)
+	
+	df["ic"+seed+"SC"+pair_idx]        = np.where(isEB, geticEB(df[ieta], df[iphi], positiveZ_col),        np.nan)
+	
+	df["sc"+seed+"SC"+pair_idx]        = np.where(isEB, getSM(df[iphi],positiveZ_col), getSC(df[ix],df[iy],isEB)) #SM for EB, SC for EE
+	
+	df["ietaphi"+seed+"SC"+pair_idx]   = np.where(isEB, numberByEtaPhiEB(df[ieta],df[iphi],positiveZ_col), np.nan)
 
 	# trigger towers
 	ietaAbsTT_col                      = np.where(isEB, ietaAbsTTEB(df[ieta]),                       np.nan)
-	ietaTT_col                         = np.where(isEB, ietaTTEB(ietaAbsTT_col , iz_col),            np.nan)
+	ietaTT_col                         = np.where(isEB, ietaTTEB(ietaAbsTT_col , positiveZ_col),            np.nan)
 	iphiTT_col                         = np.where(isEB, iphiTTEB(df[iphi]),                          np.nan)
 
-	df["iTTSeedSC"+pair_idx]           = np.where(isEB, iTTEB(ietaAbsTT_col,iphiTT_col, iz_col),     np.nan)
-	df["VFESeedSC"+pair_idx]           = np.where(isEB, VFE_EB(df[ieta]),     np.nan)
-	df["TRTSeedSC"+pair_idx]           = np.where(isEB, TRT(df["iTTSeedSC"+pair_idx], isEB),     np.nan)
+	df["iTT"+seed+"SC"+pair_idx]           = np.where(isEB, iTTEB(ietaAbsTT_col,iphiTT_col, positiveZ_col),     np.nan)
+	df["VFE"+seed+"SC"+pair_idx]           = np.where(isEB, VFE_EB(df[ieta]),     np.nan)
+	df["TRT"+seed+"SC"+pair_idx]           = np.where(isEB, TRT(df["iTT"+seed+"SC"+pair_idx], isEB),     np.nan)
 
 	return df
