@@ -17,6 +17,7 @@ import modules.classes as obj
 
 import pandas as pd
 
+import gc
 import ROOT
 import datetime
 import os, sys
@@ -51,7 +52,9 @@ if debug:
     files = files[-1:] #files[:1]
     files_extra = files_extra[:1]
 
-### ECALELF content:
+print("*** Processing year "+str(args.year))
+
+### ECALELF original content:
 #['runNumber', 'lumiBlock', 'eventNumber', 'eventTime', 'nBX', 'isTrain', 'mcGenWeight', 'HLTfire', 
 #'rho', 'nPV', 'nPU', 'vtxX', 'vtxY', 'vtxZ', 
 #'eleID', 'chargeEle', 'recoFlagsEle', 'etaEle', 'phiEle', 'fremEle', 'R9Ele', 
@@ -68,67 +71,68 @@ if debug:
 #'invMass_rawSC', 'invMass_rawSC_esSC', 'invMass_highEta', 'ele1E', 'ele2E', 'ele1ecalE', 'ele2ecalE', 'angleEle12']
 
 
-
 branches = ['runNumber','etaSCEle','phiSCEle',
-            'xSeedSC','ySeedSC',
-            'R9Ele', 'ZEvent','eleID', 
+            'xSeedSC','ySeedSC','etaEle','vtxZ',
+            'R9Ele', 
             'timeSeedSC','timeSecondToSeedSC','amplitudeSeedSC', 'amplitudeSecondToSeedSC',
-            'energySeedSC', 'energySecondToSeedSC',
-            'noiseSeedSC', 
-            'laserSeedSC','alphaSeedSC', 'chargeEle', 'invMass', 'gainSeedSC']
+            'energySeedSC', 'energySecondToSeedSC', 'noiseSeedSC',
+            'invMass','ele1E', 'ele2E']
+branches_extra = ['noiseSeedSC1_GT', 'noiseSeedSC2_GT', 'runNumber', 'noiseSecondToSeedSC1_GT','iTTSeedSC1', 'scSeedSC1','iTTSecondToSeedSC1', 'scSecondToSeedSC1',]
 
-branches_extra = ['XRecHitSCEle1','XRecHitSCEle2',
-                  'YRecHitSCEle1','YRecHitSCEle2',
-                  'ZRecHitSCEle1','ZRecHitSCEle2']
-
-
-
-df_original= load_data.load_chain(files, "selected", branches)
-#df_extra= load_data.load_chain(files_extra, "extraCalibTree", branches_extra, firsthit = True) # taking only X, Y, Z of first hit
-#df_chain = pd.concat([df_original, df_extra], axis=1) 
-df_chain = df_original
+#df_chain = load_data.load_chain(files, "selected", branches, suffix = "extra", other_tree_name = "extended", other_branch = branches_extra)
+df_chain = load_data.load_chain(files, "selected", branches)
+#df_extra = load_data.load_chain(files, "extended", branches_extra, suffix = "extra") # taking only X, Y, Z of first hit
+#df_chain = pd.concat([df_original.set_index('runNumber'), df_extra.set_index('runNumber')], axis=1, join = 'inner').reset_index()
+#df_chain = df_original
+print(df_chain.keys())
 print("entries = %d" % df_chain.shape[0])
 
 #flat columns
-branches_split = ["chargeEle","etaSCEle", "phiSCEle","xSeedSC", "ySeedSC", "amplitudeSeedSC","energySeedSC", "energySecondToSeedSC", "amplitudeSecondToSeedSC","R9Ele"]
+branches_split = ["timeSeedSC","timeSecondToSeedSC","chargeEle","etaSCEle", "phiSCEle","xSeedSC", "ySeedSC", "amplitudeSeedSC","energySeedSC", "energySecondToSeedSC", "amplitudeSecondToSeedSC","R9Ele","etaEle","noiseSeedSC"]
 for br in branches_split:
     if br+"[1]" in df_chain:
         df_chain[[br+'1', br+'2']] = df_chain[[br+'[0]',br+'[1]']]
+        df_chaih = df_chain.drop(columns=[br+'[0]',br+'[1]',br+'[2]'])
 
-
-df_chain['deltaT_ee'] = df_chain['timeSeedSC[0]']-df_chain['timeSeedSC[1]']
+df_chain['deltaT_ee'] = df_chain['timeSeedSC1']-df_chain['timeSeedSC2']
 
 df_chain['deltaEta_ee'] = df_chain['etaSCEle1']-df_chain['etaSCEle1']
 df_chain['deltaPhi_ee'] = compute.delta_phi(df_chain['phiSCEle1'], df_chain['phiSCEle2'])
-df_chain['deltaT_e1_seeds'] = df_chain['timeSeedSC[0]']-df_chain['timeSecondToSeedSC[0]']
-#df_chain['deltaT_e1_seeds'] = df_chain['deltaT_e1_seeds'].div(np.sqrt(2))
+df_chain['deltaT_e1'] = df_chain['timeSeedSC1']-df_chain['timeSecondToSeedSC1']
 
-df_chain['deltaT_e2_seeds'] = df_chain['timeSeedSC[1]']-df_chain['timeSecondToSeedSC[1]']
-
-df_chain['deltaA_e1_seeds'] = df_chain['amplitudeSeedSC[0]']-df_chain['amplitudeSecondToSeedSC[0]']
-df_chain['deltaA_e2_seeds'] = df_chain['amplitudeSeedSC[1]']-df_chain['amplitudeSecondToSeedSC[1]']
+df_chain['deltaA_e1'] = df_chain['amplitudeSeedSC1']-df_chain['amplitudeSecondToSeedSC1']
+df_chain['deltaA_e2'] = df_chain['amplitudeSeedSC2']-df_chain['amplitudeSecondToSeedSC2']
 
 
-df_chain['effA_ee'] = compute.effective_amplitude(df_chain['amplitudeSeedSC[0]'],
-                                                        df_chain['noiseSeedSC[0]'],
-                                                        df_chain['amplitudeSeedSC[1]'],
-                                                        df_chain['noiseSeedSC[1]'])
+df_chain['effA_ee'] = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],
+                                                        df_chain['noiseSeedSC1'],
+                                                        df_chain['amplitudeSeedSC2'],
+                                                        df_chain['noiseSeedSC2'])
 
-df_chain['effA_e1_seeds'] = compute.effective_amplitude(df_chain['amplitudeSeedSC[0]'],
-                                                        df_chain['noiseSeedSC[0]'],
-                                                        df_chain['amplitudeSecondToSeedSC[0]'],
-                                                        df_chain['noiseSeedSC[0]'])
+df_chain['effA_e1'] = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],
+                                                        df_chain['noiseSeedSC1'],
+                                                        df_chain['amplitudeSecondToSeedSC1'],
+                                                        df_chain['noiseSeedSC1'])
+#
+#df_chain['effA_e2'] = compute.effective_amplitude(df_chain['amplitudeSeedSC2'],
+#                                                        df_chain['noiseSeedSC2'],
+#                                                        df_chain['amplitudeSecondToSeedSC2'],
+#                                                        df_chain['noiseSeedSC2'])
 
-df_chain['effA_e2_seeds'] = compute.effective_amplitude(df_chain['amplitudeSeedSC[1]'],
-                                                        df_chain['noiseSeedSC[1]'],
-                                                        df_chain['amplitudeSecondToSeedSC[1]'],
-                                                        df_chain['noiseSeedSC[1]'])
+df_chain['timeSeedSC1_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle1'], df_chain['timeSeedSC1'])
+df_chain['timeSeedSC2_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle2'], df_chain['timeSeedSC2'])
+df_chain['timeSecondToSeedSC1_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle1'], df_chain['timeSecondToSeedSC1'])
+df_chain['timeSecondToSeedSC2_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle2'], df_chain['timeSecondToSeedSC2'])
 
-#df_chain['responseSeedSC1'] = compute.relative_response(df_chain['laserSeedSC[0]'],df_chain['alphaSeedSC[0]'])
-#df_chain['responseSeedSC2'] = compute.relative_response(df_chain['laserSeedSC[1]'],df_chain['alphaSeedSC[1]'])
+df_chain['deltaT_ee_corr'] = df_chain['timeSeedSC1_corr']-df_chain['timeSeedSC2_corr']
+df_chain['deltaT_e1_corr'] = df_chain['timeSeedSC1_corr']-df_chain['timeSecondToSeedSC1_corr']
 
-df_chain = get_ids.appendIdxs(df_chain, "1")
-df_chain = get_ids.appendIdxs(df_chain, "2")
+
+#df = get_ids.appendIdxs(df, "1")
+#df = get_ids.appendIdxs(df, "2")
+
+#df_chain['transparencySeedSC1'] = compute.relative_response(df_chain['laserSeedSC[0]'],df_chain['alphaSeedSC[0]'])
+#df_chain['transparencySeedSC2'] = compute.relative_response(df_chain['laserSeedSC[1]'],df_chain['alphaSeedSC[1]'])
 
 
 tag = ""
@@ -137,7 +141,6 @@ if args.tag:
     os.makedirs("plots/"+str(tag), exist_ok = True)
 
 outFile = ROOT.TFile.Open("plots/"+str(tag)+"/outPlot_"+str(year)+".root","RECREATE")
-
 config = config_reader.cfg_reader(args.cfg)
 
 hvarList    = config.readListOption("general::hvariables")
@@ -172,31 +175,33 @@ for var in toPlot:
         sys.exit()
 
 ### 1D histograms
-for hvar in hvarList:
-    h = obj.histo1D(hvar,config)
-    for s in h.selections: 
-        s_name = h.var+'_'+s.replace('-',"_")
-        df_this = select.apply_selection(df_chain, s)
-        plot_root = plt_to_TH1(h.plot(df_this), s_name)
-        plot_root.Write()
-        plt.close()
-        if "outliers" in h.options: 
-            plot_root = plt_to_TH1(h.outlier_aware_hist(df_this), s_name+'_outliers')
-            if plot_root: plot_root.Write()
-        del df_this
+if hvarList:
+    for hvar in hvarList:
+        h = obj.histo1D(hvar,config)
+        for s in h.selections: 
+            s_name = h.var+'_'+s.replace('-',"_")
+            df_this = select.apply_selection(df_chain, s)
+            plot_root = plt_to_TH1(h.plot(df_this), s_name)
+            plot_root.Write()
+            plt.close()
+            if "outliers" in h.options: 
+                plot_root = plt_to_TH1(h.outlier_aware_hist(df_this), s_name+'_outliers')
+                if plot_root: plot_root.Write()
+            del df_this
+            gc.collect()
 
 ### 2D histograms
-for hvars in hvar2DList:
-    h = obj.histo2D(hvars, config)
-    for s in h.selections:
-        s_name = h.name+'_'+s.replace('-',"_")
-        df_this = select.apply_selection(df_chain, s)
-        plot_root = plt_to_TH2(h.plot(df_this), s_name)
-        plot_root.Write()
-        plt.close()
-        del df_this
-
-
+if hvar2DList:
+    for hvars in hvar2DList:
+        h = obj.histo2D(hvars, config)
+        for s in h.selections:
+            s_name = h.name+'_'+s.replace('-',"_")
+            df_this = select.apply_selection(df_chain, s)
+            plot_root = plt_to_TH2(h.plot(df_this), s_name)
+            plot_root.Write()
+            plt.close()
+            del df_this
+            gc.collect()
 
 if config.hasOption("general::grvariables"):
     for grvar in grList:
@@ -232,7 +237,11 @@ if config.hasOption("general::grvariables"):
                         aggr_var = aggr_var[1:]
                         if not custom_binning:
                             graph = df_this.groupby(xvar)[yvar]
-                            aggr_graph = graph.agg(aggr_var)
+                            if hasattr(compute, aggr_var[0]):
+                                aggr_graph = graph.agg(getattr(compute, aggr_var[0]))
+                            elif hasattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var[0]):
+                                aggr_graph = getattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var[0])(graph)
+                            #aggr_graph = graph.agg(aggr_var)
                         else: 
                             mid = (binning[1:] + binning[:-1]) / 2
                             graph = df_this.groupby(pd.cut(df_this[xvar], binning))[yvar]
@@ -286,6 +295,8 @@ if config.hasOption("general::mvariables"):
             del df_this
 
 outFile.Close()
+
+print("*** Output saved in plots/"+str(tag)+"/outPlot_"+str(year)+".root")
 
 
 

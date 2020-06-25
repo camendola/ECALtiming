@@ -18,7 +18,7 @@ def delta_phi(phi1, phi2):
 
 #effective sigma
 def effs(v):
-   n = len(v)
+   n = v.size
    if n < 2:
        return 0.
    v = v.sort_values()
@@ -26,3 +26,14 @@ def effs(v):
    d_min = v.iloc[s] - v.iloc[0]
    diff = v.diff(periods = s)
    return min(d_min, diff.min()) / 2.
+
+
+def corr_time(vtx, eta, t):
+	c = 0.0299792458
+	# D        = 
+	130*np.cosh(eta)
+	# costheta = np.tanh(eta)
+	tp = t - (np.sqrt(130*np.cosh(eta)*130*np.cosh(eta) + vtx*vtx - 2*(vtx)*130*np.cosh(eta)*np.tanh(eta)) - 130*np.cosh(eta))*c
+	return tp
+
+
