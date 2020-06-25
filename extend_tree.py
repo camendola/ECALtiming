@@ -11,6 +11,9 @@ from tqdm import tqdm
 import gc
 import functools
 print = functools.partial(print, flush=True)
+import psutil
+process = psutil.Process(os.getpid())
+print(str(float(process.memory_info().rss)/1000000))  # in bytes 
 
 parser = argparse.ArgumentParser()
 
@@ -31,8 +34,8 @@ branches_extra = ['XRecHitSCEle1','XRecHitSCEle2',
                   'YRecHitSCEle1','YRecHitSCEle2',
                   'ZRecHitSCEle1','ZRecHitSCEle2']
 
-#drop at the end to avoid duplicates in the ordinary tree and the extended tree
-branches_todrop = ['eventTime','runNumber']
+
+branches_todrop = []
 
 print("@@@ Loading files...")
 file = args.file
@@ -57,7 +60,8 @@ for br in branches_split:
         branches_todrop.append(br+'2')
         df = df.drop(columns = [br+'[0]',br+'[1]', br+'[2]'] )
 
-
+initial_size = df.shape[0]
+print(str(float(process.memory_info().rss)/1000000))  #
 #df_extra = load_data.load_file(file_extra, "extraCalibTree", branches_extra) # taking only iX, iY, iZ of first and second by energy
 #df_extra1 = df_extra.stack().str[0].unstack().fillna(-999).astype("int")
 #df_extra1 = df_extra1.drop(columns = ['XRecHitSCEle1','XRecHitSCEle2','YRecHitSCEle1','YRecHitSCEle2'])
@@ -86,7 +90,7 @@ del df_extra1, df_extra2
 gc.collect()
 df_extra1 = pd.DataFrame()
 df_extra2 = pd.DataFrame()
-
+print(process.memory_info().rss)  #
 #-------------------
 print("@@@ Loading fill lumi table...")
 
@@ -105,15 +109,16 @@ group = df_lumi.groupby("Run").agg({'Recorded(/ub)':'sum', 'LS':'count', 'Fill':
 df['Fill'] = df['runNumber'].map(group.astype('int').set_index('Run')['Fill'])
 df['LumiSections'] = df['runNumber'].map(group.astype('int').set_index('Run')['LS'])
 df['RecordedLumi'] = df['runNumber'].map(group.astype({'Run':'int'}).set_index('Run')['Recorded(/ub)'])
-df['RunLenght'] = 23*df['LumiSections'] # run lenght in seconds
+df['LumiInst']     = df['RecordedLumi']/23000
 
+print(str(float(process.memory_info().rss)/1000000))  #
 del df_lumi, group
 
 gc.collect()
 df_lumi = pd.DataFrame()
 group = pd.DataFrame()
 #---------------------
-
+print("before appending:" , str(process.memory_info().rss/1000000))  #
 print("@@@ Appending DetIDs and geometric/electronic elements...")
 
 df = get_ids.appendIdxs(df, "1")
@@ -121,9 +126,11 @@ df = get_ids.appendIdxs(df, "2")
 df = get_ids.appendIdxs(df, "1", "SecondToSeed")
 df = get_ids.appendIdxs(df, "2", "SecondToSeed")    
 
+print("after appending:", str(float(process.memory_info().rss)/1000000))  #
 
 print("@@@ Loading IOVs: EcalPedestals (Run 2 UL)")
 era = file.split("Run"+str(args.year))[1][0]
+print(process.memory_info().rss)  #
 print("@@@ Run"+str(args.year)+str(era))
 dump_file = "/drf/projets/cms/ca262531/ECALconditions_dumps/EcalPedestalsRun"+str(args.year)+str(era)+".dat"
 
@@ -140,38 +147,56 @@ del dump_chunk_list
 df_dump["end"] = df_dump["begin"].shift(-1)
 df_dump.loc[max(df_dump.index), ["end"]] = 1591695307
 df_dump.astype({'end':'int32'})
-gc.collect()
 df_red = df_dump[["begin","end"]].drop_duplicates()
+gc.collect()
 
+print(str(float(process.memory_info().rss)/1000000))  #
 #---------------------
 
 print ("@@@ Matching IOVs...")
+print(str(float(process.memory_info().rss)/1000000))
 
-i, j = np.where((df.eventTime.values[:, None] >= df_red.begin.values) & (df.eventTime.values[:, None] < df_red.end.values))
-df = pd.DataFrame(
-    np.column_stack([df.values[i], df_red.values[j]]),
-    columns=df.columns.append(df_red.columns)
-)
-del df_red, i, j
+#i, j = np.where((df.eventTime.values[:, None] >= df_red.begin.values) & (df.eventTime.values[:, None] < df_red.end.values))
+
+chunk_list = []
+for g, df_chunk in df.groupby(np.arange(len(df)) // 50000):
+    
+    i, j = np.where((df_chunk.eventTime.values[:, None] >= df_red.begin.values) & (df_chunk.eventTime.values[:, None] < df_red.end.values))
+    df_chunk = pd.DataFrame(
+        np.column_stack([df_chunk.values[i], df_red.values[j]]),
+        columns=df_chunk.columns.append(df_red.columns)
+    )
+    chunk_list.append(df_chunk)
+    del i, j
+    gc.collect()
+
+df = pd.concat(chunk_list)
+del chunk_list
+
+print("added begin end", str(float(process.memory_info().rss)/1000000))
+
+print(df.shape[0])
+del df_red
 gc.collect()
 df_red = pd.DataFrame()
-
+print(process.memory_info().rss)  #
 print ("@@@ Mapping Ecal pedestals by time and crystal...")
-#print(df[['EcalDetIDSeedSC1','begin']])
-#print(df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])
-#print(df.set_index(['EcalDetIDSeedSC1','begin']).index.map((df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])))
-#print(df.set_index(['EcalDetIDSeedSC2','begin']).index.map((df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])).astype('float'))
-df['noiseSeedSC1_GT'] = df.set_index(['EcalDetIDSeedSC1','begin']).index.map((df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])).astype('float')
-df['noiseSeedSC2_GT'] = df.set_index(['EcalDetIDSeedSC2','begin']).index.map((df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])).astype('float')
-
-#print(df.set_index(['EcalDetIDSecondToSeedSC1','begin']).index.map((df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])))
-#print(df.set_index(['EcalDetIDSecondToSeedSC2','begin']).index.map((df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])).astype('float'))
-df['noiseSecondToSeedSC1_GT'] = df.set_index(['EcalDetIDSecondToSeedSC1','begin']).index.map((df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])).astype('float')
-df['noiseSecondToSeedSC2_GT'] = df.set_index(['EcalDetIDSecondToSeedSC2','begin']).index.map((df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])).astype('float')
-
+chunk_list = []
+for g, df_chunk in df.groupby(np.arange(len(df)) // (initial_size/20)):
+    print ("@@@ Going over chunks...", str(float(process.memory_info().rss)/1000000))
+    print(df_chunk.shape[0])
+    df_chunk['noiseSeedSC1_GT']        = df_chunk.set_index(['EcalDetIDSeedSC1','begin']).index.map((df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])).astype('float')
+    df_chunk['noiseSeedSC2_GT']        = df_chunk.set_index(['EcalDetIDSeedSC2','begin']).index.map((df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])).astype('float')
+    df_chunk['noiseSecondToSeedSC1_GT'] = df_chunk.set_index(['EcalDetIDSecondToSeedSC1','begin']).index.map((df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])).astype('float')
+    df_chunk['noiseSecondToSeedSC2_GT'] = df_chunk.set_index(['EcalDetIDSecondToSeedSC2','begin']).index.map((df_dump[['DetID','noise','begin']].set_index(['DetID','begin'])['noise'])).astype('float')
+    chunk_list.append(df_chunk)
+df = pd.concat(chunk_list)
+del chunk_list
+print(df.shape[0])
 
 del df_dump
 gc.collect()
+
 df_dump = pd.DataFrame()
 
 #don't save the quantities that exist already in the original tree
@@ -182,3 +207,8 @@ outfile_name = file.replace(".root", "_extra.root")
 print("@@@ Saving output file ", outfile_name)
 df.to_root(outfile_name, key = "extended", mode='w') # recreate mode
 
+final_size = df.shape[0]
+if initial_size > final_size:
+    print("HEADS UP! final size is smaller than initial size")
+    print("initial ", str(initial_size))
+    print("final   ", str(final_size))
