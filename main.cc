@@ -193,8 +193,10 @@ int main (int argc, char ** argv)
         a_mean.emplace_back(bin_values.Mean("aeff_ee"));
 
         // entries vs run number
-        hc_h1d.emplace_back(eb_eb.Histo1D({"eb_eb_entries_vs_run", "", 11000, 273100, 284100}, "runNumber"));
-        hc_h1d.emplace_back(eb_eb.Filter("aeff_ee > 500").Histo1D({"eb_eb_aeff500_entries_vs_run", "", 11000, 273100, 284100}, "runNumber"));
+        int run_min = run_list.front() - 100;
+        int run_max = run_list.back()  + 100;
+        hc_h1d.emplace_back(eb_eb.Histo1D({"eb_eb_entries_vs_run", "", run_max - run_min, (float)run_min, (float)run_max}, "runNumber"));
+        hc_h1d.emplace_back(eb_eb.Filter("aeff_ee > 500").Histo1D({"eb_eb_aeff500_entries_vs_run", "", run_max - run_min, (float)run_max, (float)run_min}, "runNumber"));
 
         // take values for eff_sigma vs run number
         std::vector<ROOT::RDF::RResultPtr<std::vector<float> > > t_corr_run;
