@@ -73,8 +73,8 @@ int main (int argc, char ** argv)
         for (auto & s : input_files) std::cout << s << "\n";
 
         ROOT::EnableImplicitMT();
-        ROOT::RDataFrame df("selected", input_files);
-        //ROOT::RDataFrame df("selected", "/home/ferri/data/ecalelf/ntuples/13TeV/ALCARERECO/103X_dataRun2_v6_ULBaseForICs_FinalEtaSv2_newRegV1/DoubleEG-ZSkim-Run2016B-07Aug17_ver2/273150-275376/271036-284044_PromptReco/pedNoise/DoubleEG-ZSkim-Run2016B-07Aug17_ver2-273150-275376.root");
+        //ROOT::RDataFrame df("selected", input_files);
+        ROOT::RDataFrame df("selected", "/home/ferri/data/ecalelf/ntuples/13TeV/ALCARERECO/103X_dataRun2_v6_ULBaseForICs_FinalEtaSv2_newRegV1/DoubleEG-ZSkim-Run2016B-07Aug17_ver2/273150-275376/271036-284044_PromptReco/pedNoise/DoubleEG-ZSkim-Run2016B-07Aug17_ver2-273150-275376.root");
 
         // selections
 
@@ -117,7 +117,7 @@ int main (int argc, char ** argv)
                     .Define("delta_a_e1", "amplitudeSeedSC[1] - amplitudeSecondToSeedSC[1]")
                     .Define("aeff_e0", "amplitudeSeedSC[0] / noiseSeedSC[0]")
                     .Define("aeff_e1", "amplitudeSeedSC[1] / noiseSeedSC[1]")
-                    .Define("aeff_ee", "aeff_e0 * aeff_e1 / sqrt(amplitudeSeedSC[0] * amplitudeSeedSC[0] + amplitudeSeedSC[1] * amplitudeSeedSC[1])")
+                    .Define("aeff_ee", "aeff_e0 * aeff_e1 / sqrt(aeff_e0 * aeff_e0 + aeff_e1 * aeff_e1)")
                     .Define("t_seed_corr", time_correction_vtx, {"vtxZ", "etaSCEle", "timeSeedSC"})
                     .Define("t_seed_corr_e0", "t_seed_corr[0]")
                     .Define("t_second_to_seed_corr", time_correction_vtx, {"vtxZ", "etaSCEle", "timeSecondToSeedSC"})
@@ -139,18 +139,18 @@ int main (int argc, char ** argv)
         auto ee_ee = comm.Filter(ee);
 
         // delta t per year
-        hc_h1d.push_back(eb_eb.Histo1D({"delta_t_ee_corr_eb_eb", "", 200, -5, 5.}, "delta_t_ee_corr"));
-        hc_h1d.push_back(eb_ee.Histo1D({"delta_t_ee_corr_eb_ee", "", 200, -5, 5.}, "delta_t_ee_corr"));
-        hc_h1d.push_back(ee_ee.Histo1D({"delta_t_ee_corr_ee_ee", "", 200, -5, 5.}, "delta_t_ee_corr"));
-        hc_h1d.push_back(eb_eb.Histo1D({"delta_t_e_corr_eb_eb",  "", 200, -5, 5.}, "delta_t_e_corr"));
-        hc_h1d.push_back(eb_ee.Histo1D({"delta_t_e_corr_eb_ee",  "", 200, -5, 5.}, "delta_t_e_corr"));
-        hc_h1d.push_back(ee_ee.Histo1D({"delta_t_e_corr_ee_ee",  "", 200, -5, 5.}, "delta_t_e_corr"));
+        hc_h1d.emplace_back(eb_eb.Histo1D({"delta_t_ee_corr_eb_eb", "", 200, -5, 5.}, "delta_t_ee_corr"));
+        hc_h1d.emplace_back(eb_ee.Histo1D({"delta_t_ee_corr_eb_ee", "", 200, -5, 5.}, "delta_t_ee_corr"));
+        hc_h1d.emplace_back(ee_ee.Histo1D({"delta_t_ee_corr_ee_ee", "", 200, -5, 5.}, "delta_t_ee_corr"));
+        hc_h1d.emplace_back(eb_eb.Histo1D({"delta_t_e_corr_eb_eb",  "", 200, -5, 5.}, "delta_t_e_corr"));
+        hc_h1d.emplace_back(eb_ee.Histo1D({"delta_t_e_corr_eb_ee",  "", 200, -5, 5.}, "delta_t_e_corr"));
+        hc_h1d.emplace_back(ee_ee.Histo1D({"delta_t_e_corr_ee_ee",  "", 200, -5, 5.}, "delta_t_e_corr"));
 
         // time bias vs. vertex
-        hc_h2d.push_back(eb_eb.Filter("etaSCEle[0] > 1.3").Histo2D(  {"ele0_t_vs_vtx",          "", 50, -15, 15, 50, -1, 1}, "vtxZ", "t_e0"));
-        hc_p  .push_back(eb_eb.Filter("etaSCEle[0] > 1.3").Profile1D({"ele0_t_vs_vtx_pfx",      "", 50, -15, 15}, "vtxZ", "t_e0"));
-        hc_h2d.push_back(eb_eb.Filter("etaSCEle[0] > 1.3").Histo2D(  {"ele0_t_corr_vs_vtx",     "", 50, -15, 15, 50, -1, 1}, "vtxZ", "t_e0"));
-        hc_p  .push_back(eb_eb.Filter("etaSCEle[0] > 1.3").Profile1D({"ele0_t_corr_vs_vtx_pfx", "", 50, -15, 15}, "vtxZ", "t_seed_corr_e0"));
+        hc_h2d.emplace_back(eb_eb.Filter("etaSCEle[0] > 1.3").Histo2D(  {"ele0_t_vs_vtx",          "", 50, -15, 15, 50, -1, 1}, "vtxZ", "t_e0"));
+        hc_p  .emplace_back(eb_eb.Filter("etaSCEle[0] > 1.3").Profile1D({"ele0_t_vs_vtx_pfx",      "", 50, -15, 15}, "vtxZ", "t_e0"));
+        hc_h2d.emplace_back(eb_eb.Filter("etaSCEle[0] > 1.3").Histo2D(  {"ele0_t_corr_vs_vtx",     "", 50, -15, 15, 50, -1, 1}, "vtxZ", "t_seed_corr_e0"));
+        hc_p  .emplace_back(eb_eb.Filter("etaSCEle[0] > 1.3").Profile1D({"ele0_t_corr_vs_vtx_pfx", "", 50, -15, 15}, "vtxZ", "t_seed_corr_e0"));
 
         // run list
         // if a run_list file does not exists, compute it
@@ -160,7 +160,7 @@ int main (int argc, char ** argv)
         //for (auto & r : run_list) std::cout << r << "\n";
 
         // delta_t vs effective amplitude
-        hc_h2d.push_back(eb_eb.Histo2D({"global_delta_t_vs_aeff", "", 101, 0, 2500, 50, -3, 3}, "aeff_ee", "delta_t_ee_corr"));
+        hc_h2d.emplace_back(eb_eb.Histo2D({"global_delta_t_vs_aeff", "", 100, 0, 2500, 50, -3, 3}, "aeff_ee", "delta_t_ee_corr"));
 
         // take values for eff_sigma vs effective amplitude
         auto nbins = 10;
@@ -173,16 +173,20 @@ int main (int argc, char ** argv)
                 auto bmax = m + (M - m) / nbins * (i + 1);
                 // bin selection for Aeff
                 auto bin_values = eb_eb.Filter("aeff_ee > " + std::to_string(bmin) + " && aeff_ee < " + std::to_string(bmax));
-                t_corr.push_back(bin_values.Take<float>("delta_t_ee_corr"));
-                a_mean.push_back(bin_values.Mean("aeff_ee"));
+                t_corr.emplace_back(bin_values.Take<float>("delta_t_ee_corr"));
+                a_mean.emplace_back(bin_values.Mean("aeff_ee"));
                 // also get the 1D histogram corresponding to the distribution in the bin
                 // - this could actually be retrieved directly from the 2D histogram above
                 auto hname = "delta_t_ee_corr_bin" + std::to_string(i) + "_" + std::to_string((int)bmin) + "_" + std::to_string((int)bmax);
-                hc_h1d.push_back(bin_values.Histo1D({hname.c_str(), "", 100, -2, 2.}, "delta_t_ee_corr"));
+                hc_h1d.emplace_back(bin_values.Histo1D({hname.c_str(), "", 100, -2, 2.}, "delta_t_ee_corr"));
         }
         auto bin_values = eb_eb.Filter("aeff_ee > " + std::to_string(M));
-        t_corr.push_back(bin_values.Take<float>("delta_t_ee_corr"));
-        a_mean.push_back(bin_values.Mean("aeff_ee"));
+        t_corr.emplace_back(bin_values.Take<float>("delta_t_ee_corr"));
+        a_mean.emplace_back(bin_values.Mean("aeff_ee"));
+
+        // entries vs run number
+        hc_h1d.emplace_back(eb_eb.Histo1D({"eb_eb_entries_vs_run", "", 11000, 273100, 284100}, "runNumber"));
+        hc_h1d.emplace_back(eb_eb.Filter("aeff_ee > 500").Histo1D({"eb_eb_aeff500_entries_vs_run", "", 11000, 273100, 284100}, "runNumber"));
 
         // take values for eff_sigma vs run number
         std::vector<ROOT::RDF::RResultPtr<std::vector<float> > > t_corr_run;
@@ -210,10 +214,10 @@ int main (int argc, char ** argv)
                 g_dt_mean_aeff     ->SetPoint(i, *a_mean[i], mean(*t_corr[i]));
                 std::cout << "--> " << *a_mean[i] << " " << mean(*t_corr[i]) << " " << stddev(*t_corr[i]) << " " << eff_sigma(*t_corr[i]) << "\n";
         }
-        hc_g.push_back(g_dt_effsigma_aeff);
-        hc_g.push_back(g_dt_stddev_aeff);
+        hc_g.emplace_back(g_dt_effsigma_aeff);
+        hc_g.emplace_back(g_dt_stddev_aeff);
 
-        auto g_dt_effsigma_run = new TGraph(); g_dt_effsigma_run->SetNameTitle("delta_t_eff_sigma_vs_run", "delta_t_eff_sigma_vs_run");
+        auto g_dt_effsigma_run = new TGraph(); g_dt_effsigma_run->SetNameTitle("delta_t_effsigma_vs_run", "delta_t_effsigma_vs_run");
         auto g_dt_mean_run     = new TGraph(); g_dt_mean_run->SetNameTitle("delta_t_mean_vs_run", "delta_t_mean_vs_run");
         int cnt = 0;
         for (size_t i = 0; i < t_corr_run.size(); ++i) {
@@ -224,8 +228,8 @@ int main (int argc, char ** argv)
                         ++cnt;
                 }
         }
-        hc_g.push_back(g_dt_effsigma_run);
-        hc_g.push_back(g_dt_mean_run);
+        hc_g.emplace_back(g_dt_effsigma_run);
+        hc_g.emplace_back(g_dt_mean_run);
 
         // save histograms
         auto fout = TFile::Open("out_plots.root", "recreate");
