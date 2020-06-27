@@ -52,6 +52,15 @@ std::vector<std::string> retrieve_files(int year)
                 std::ifstream file("filelists/ECALELF_Run2UL/Data_UL2016.log");
                 std::string str; 
                 while (std::getline(file, str)) f.emplace_back(str);
+        } else if (year == 2017) {
+                //std::ifstream file("filelists/ECALELF_Run2UL/Data_UL2017.log");
+                std::ifstream file("filelists/ECALELF_Run2UL/Data_ALCARECO_UL2017.log");
+                std::string str; 
+                while (std::getline(file, str)) f.emplace_back(str);
+        } else if (year == 2018) {
+                std::ifstream file("filelists/ECALELF_Run2UL/Data_UL2018.log");
+                std::string str; 
+                while (std::getline(file, str)) f.emplace_back(str);
         }
         return f;
 }
