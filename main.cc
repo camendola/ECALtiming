@@ -87,28 +87,30 @@ int main (int argc, char ** argv)
         // selections
 
         // geometry
-        auto ee           = "abs(etaSCEle[0]) > " eb_threshold " && abs(etaSCEle[1]) > " eb_threshold;
-        auto ee_plus      = "etaSCEle[0] > " eb_threshold " && etaSCEle[1] > " eb_threshold;
-        auto ee_minus     = "etaSCEle[0] < -" eb_threshold " && etaSCEle[1] < -" eb_threshold;
-        auto be           = "(abs(etaSCEle[0]) > " eb_threshold " && abs(etaSCEle[1]) < " eb_threshold ") || "
-                            "(abs(etaSCEle[0]) < " eb_threshold " && abs(etaSCEle[1]) > " eb_threshold ")";
-        auto bb           = "abs(etaSCEle[0]) < " eb_threshold " && abs(etaSCEle[1]) < " eb_threshold;
+        auto ee            = "abs(etaSCEle[0]) > " eb_threshold " && abs(etaSCEle[1]) > " eb_threshold;
+        auto ee_plus       = "etaSCEle[0] > " eb_threshold " && etaSCEle[1] > " eb_threshold;
+        auto ee_minus      = "etaSCEle[0] < -" eb_threshold " && etaSCEle[1] < -" eb_threshold;
+        auto be            = "(abs(etaSCEle[0]) > " eb_threshold " && abs(etaSCEle[1]) < " eb_threshold ") || "
+                             "(abs(etaSCEle[0]) < " eb_threshold " && abs(etaSCEle[1]) > " eb_threshold ")";
+        auto bb            = "abs(etaSCEle[0]) < " eb_threshold " && abs(etaSCEle[1]) < " eb_threshold;
 
-        auto no_borders_0 = "((ySeedSC[0] % 20 + 1) > 2) && ((ySeedSC[0] % 20 + 1) < 18) && (abs(xSeedSC[0]) > 2) && (abs(ySeedSC[0]) < 24)";
-        auto no_borders_1 = "((ySeedSC[1] % 20 + 1) > 2) && ((ySeedSC[1] % 20 + 1) < 18) && (abs(xSeedSC[1]) > 2) && (abs(ySeedSC[1]) < 24)";
+        auto no_borders_0  = "((ySeedSC[0] % 20 + 1) > 2) && ((ySeedSC[0] % 20 + 1) < 18) && (abs(xSeedSC[0]) > 2) && (abs(ySeedSC[0]) < 24)";
+        auto no_borders_1  = "((ySeedSC[1] % 20 + 1) > 2) && ((ySeedSC[1] % 20 + 1) < 18) && (abs(xSeedSC[1]) > 2) && (abs(ySeedSC[1]) < 24)";
 
         // objects
-        auto clean_ee     = "abs(delta_t_ee) < 5";
+        auto clean_ee      = "abs(delta_t_ee) < 5";
 
-        auto clean_e_0    = "abs(deltaT_e0_seeds) < 5";
-        auto rel_ampl_0   = "abs(amplitudeSeedSC[0] - amplitudeSecondToSeedSC[0]) / (amplitudeSeedSC[0] + amplitudeSecondToSeedSC[0]) < 0.1)";
+        auto clean_e_0     = "abs(deltaT_e0_seeds) < 5";
+        auto rel_ampl_0    = "abs(amplitudeSeedSC[0] - amplitudeSecondToSeedSC[0]) / (amplitudeSeedSC[0] + amplitudeSecondToSeedSC[0]) < 0.1)";
 
-        auto clean_e_1    = "abs(deltaT_e1_seeds) < 5";
-        auto rel_ampl_1   = "abs(amplitudeSeedSC[1] - amplitudeSecondToSeedSC[1]) / (amplitudeSeedSC[1] + amplitudeSecondToSeedSC[1]) < 0.1)";
+        auto clean_e_1     = "abs(deltaT_e1_seeds) < 5";
+        auto rel_ampl_1    = "abs(amplitudeSeedSC[1] - amplitudeSecondToSeedSC[1]) / (amplitudeSeedSC[1] + amplitudeSecondToSeedSC[1]) < 0.1)";
+
+        auto no_saturation = "gainSeedSC[0] == 0 && gainSeedSC[1] == 0";
 
         // physics
-        auto z_mass       = "invMass > 60 && invMass < 150";
-        auto high_r9      = "R9Ele[0] > 0.94 && R9Ele[1] > 0.94";
+        auto z_mass        = "invMass > 60 && invMass < 150";
+        auto high_r9       = "R9Ele[0] > 0.94 && R9Ele[1] > 0.94";
 
         // to debug columns
         //for (auto & el : df.GetColumnNames()) std::cout << el << "\n";
@@ -133,7 +135,7 @@ int main (int argc, char ** argv)
                     .Define("delta_t_ee_corr", "t_seed_corr[0] - t_seed_corr[1]");
 
         // reasonable quality selections and no gain switch
-        auto comm = fn.Filter(z_mass).Filter(high_r9).Filter(clean_ee).Filter("gainSeedSC[0] == 0 && gainSeedSC[1] == 0");
+        auto comm = fn.Filter(z_mass, "Z mass").Filter(high_r9, "high R9").Filter(clean_ee, "delta_t_ee").Filter(no_saturation, "no sat.");
 
         // histogram and graph collectors
         std::vector<ROOT::RDF::RResultPtr<TH1D> > hc_h1d;
@@ -142,9 +144,9 @@ int main (int argc, char ** argv)
         std::vector<const TGraph *> hc_g;
 
         // common selections
-        auto eb_eb = comm.Filter(bb);
-        auto eb_ee = comm.Filter(be);
-        auto ee_ee = comm.Filter(ee);
+        auto eb_eb = comm.Filter(bb, "EB-EB");
+        auto eb_ee = comm.Filter(be, "EB-EE");
+        auto ee_ee = comm.Filter(ee, "EE-EE");
 
         // delta t per year
         hc_h1d.emplace_back(eb_eb.Histo1D({"delta_t_ee_corr_eb_eb", "", 200, -5, 5.}, "delta_t_ee_corr"));
@@ -162,7 +164,7 @@ int main (int argc, char ** argv)
 
         // run list
         // if a run_list file does not exists, compute it
-        // N.B. the copy to set triggers lazy actions, so better to be run only
+        // N.B. the copy to vector triggers lazy actions, so better to be run only
         // when necessary, and use the values cached in a file otherwise
         std::vector<unsigned int> run_list = retrieve_run_list(comm, year);
         //for (auto & r : run_list) std::cout << r << "\n";
@@ -213,6 +215,8 @@ int main (int argc, char ** argv)
          * all instant operations below this point - whenever possible
          */
 
+        eb_eb.Report()->Print();
+
         // this triggers the execution of all the lazy operations
         // by dereferencing one of the pointers
         auto g_dt_effsigma_aeff = new TGraph(); g_dt_effsigma_aeff->SetNameTitle("delta_t_effsigma_vs_aeff", "delta_t_effsigma_vs_aeff");
@@ -222,7 +226,6 @@ int main (int argc, char ** argv)
                 g_dt_effsigma_aeff ->SetPoint(i, *a_mean[i], eff_sigma(*t_corr[i]));
                 g_dt_stddev_aeff   ->SetPoint(i, *a_mean[i], stddev(*t_corr[i]));
                 g_dt_mean_aeff     ->SetPoint(i, *a_mean[i], mean(*t_corr[i]));
-                std::cout << "--> " << *a_mean[i] << " " << mean(*t_corr[i]) << " " << stddev(*t_corr[i]) << " " << eff_sigma(*t_corr[i]) << "\n";
         }
         hc_g.emplace_back(g_dt_effsigma_aeff);
         hc_g.emplace_back(g_dt_stddev_aeff);
@@ -232,13 +235,11 @@ int main (int argc, char ** argv)
         int cnt = 0;
         for (size_t i = 0; i < t_corr_run.size(); ++i) {
                 // remove runs with less than 50 entries
+                if (debug) std::cout << "--> run " << run_list[i] << ": " << (*t_corr_run[i]).size() << " entries.\n";
                 if ((*t_corr_run[i]).size() > 50) {
-                        if (debug) std::cout << "--> taking run " << run_list[i] << ": " << (*t_corr_run[i]).size() << " entries.\n";
                         g_dt_effsigma_run->SetPoint(cnt, (float)run_list[i], eff_sigma(*t_corr_run[i]));
                         g_dt_mean_run    ->SetPoint(cnt, (float)run_list[i], mean(*t_corr_run[i]));
                         ++cnt;
-                } else {
-                        if (debug) std::cout << "--> skipping run " << run_list[i] << ": " << (*t_corr_run[i]).size() << " entries.\n";
                 }
         }
         hc_g.emplace_back(g_dt_effsigma_run);
