@@ -9,6 +9,7 @@
 
 #include "modules/functions.cc"
 
+#define debug        0
 #define eb_threshold "1.479"
 
 using RVec_f = const ROOT::RVec<float> &;
@@ -223,9 +224,12 @@ int main (int argc, char ** argv)
         for (size_t i = 0; i < t_corr_run.size(); ++i) {
                 // remove runs with less than 50 entries
                 if ((*t_corr_run[i]).size() > 50) {
+                        if (debug) std::cout << "--> taking run " << run_list[i] << ": " << (*t_corr_run[i]).size() << " entries.\n";
                         g_dt_effsigma_run->SetPoint(cnt, (float)run_list[i], eff_sigma(*t_corr_run[i]));
                         g_dt_mean_run    ->SetPoint(cnt, (float)run_list[i], mean(*t_corr_run[i]));
                         ++cnt;
+                } else {
+                        if (debug) std::cout << "--> skipping run " << run_list[i] << ": " << (*t_corr_run[i]).size() << " entries.\n";
                 }
         }
         hc_g.emplace_back(g_dt_effsigma_run);
