@@ -74,8 +74,8 @@ int main (int argc, char ** argv)
         for (auto & s : input_files) std::cout << s << "\n";
 
         ROOT::EnableImplicitMT();
-        //ROOT::RDataFrame df("selected", input_files);
-        ROOT::RDataFrame df("selected", "/home/ferri/data/ecalelf/ntuples/13TeV/ALCARERECO/103X_dataRun2_v6_ULBaseForICs_FinalEtaSv2_newRegV1/DoubleEG-ZSkim-Run2016B-07Aug17_ver2/273150-275376/271036-284044_PromptReco/pedNoise/DoubleEG-ZSkim-Run2016B-07Aug17_ver2-273150-275376.root");
+        ROOT::RDataFrame df("selected", input_files);
+        //ROOT::RDataFrame df("selected", "/home/ferri/data/ecalelf/ntuples/13TeV/ALCARERECO/103X_dataRun2_v6_ULBaseForICs_FinalEtaSv2_newRegV1/DoubleEG-ZSkim-Run2016B-07Aug17_ver2/273150-275376/271036-284044_PromptReco/pedNoise/DoubleEG-ZSkim-Run2016B-07Aug17_ver2-273150-275376.root");
 
         // selections
 
