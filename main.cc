@@ -70,7 +70,13 @@ std::vector<std::string> retrieve_files(int year)
 
 int main (int argc, char ** argv)
 {
-        std::vector<std::string> input_files = retrieve_files(2016);
+        // ridiculously rudimental support for options
+        int year = 2016; // default
+        if (argc > 1) {
+                year = std::stoi(argv[1]);
+        }
+
+        std::vector<std::string> input_files = retrieve_files(year);
         for (auto & s : input_files) std::cout << s << "\n";
 
         ROOT::EnableImplicitMT();
