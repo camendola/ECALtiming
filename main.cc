@@ -24,9 +24,9 @@ ROOT::RVec<float> time_correction_vtx(float z, RVec_f eta, RVec_f t)
 }
 
 
-std::vector<unsigned int> retrieve_run_list(ROOT::RDF::RNode df)
+std::vector<unsigned int> retrieve_run_list(ROOT::RDF::RNode df, int year)
 {
-        FILE * fd = fopen("runs.list", "r");
+        FILE * fd = fopen("runs_" + std::to_string(year) + ".list", "r");
         std::vector<unsigned int> run_list;
         if (!fd) {
                 ROOT::RDF::RResultPtr<std::vector<unsigned int> > runs = df.Take<unsigned int>("runNumber");
@@ -106,7 +106,7 @@ int main (int argc, char ** argv)
         auto rel_ampl_1   = "abs(amplitudeSeedSC[1] - amplitudeSecondToSeedSC[1]) / (amplitudeSeedSC[1] + amplitudeSecondToSeedSC[1]) < 0.1)";
 
         // physics
-        auto z_mass       = "invMass > 85 && invMass < 95";
+        auto z_mass       = "invMass > 60 && invMass < 150";
         auto high_r9      = "R9Ele[0] > 0.94 && R9Ele[1] > 0.94";
 
         // to debug columns
@@ -163,7 +163,7 @@ int main (int argc, char ** argv)
         // if a run_list file does not exists, compute it
         // N.B. the copy to set triggers lazy actions, so better to be run only
         // when necessary, and use the values cached in a file otherwise
-        std::vector<unsigned int> run_list = retrieve_run_list(comm);
+        std::vector<unsigned int> run_list = retrieve_run_list(comm, year);
         //for (auto & r : run_list) std::cout << r << "\n";
 
         // delta_t vs effective amplitude
