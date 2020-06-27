@@ -45,12 +45,27 @@ std::vector<unsigned int> retrieve_run_list(ROOT::RDF::RNode df)
 }
 
 
+std::vector<std::string> retrieve_files(int year)
+{
+        std::vector<std::string> f;
+        if (year == 2016) {
+                std::ifstream file("filelists/ECALELF_Run2UL/Data_UL2016.log");
+                std::string str; 
+                while (std::getline(file, str)) f.emplace_back(str);
+        }
+        return f;
+}
+
+
 
 int main (int argc, char ** argv)
 {
-        ROOT::EnableImplicitMT();
+        std::vector<std::string> input_files = retrieve_files(2016);
+        for (auto & s : input_files) std::cout << s << "\n";
 
-        ROOT::RDataFrame df("selected", "/home/ferri/data/ecalelf/ntuples/13TeV/ALCARERECO/103X_dataRun2_v6_ULBaseForICs_FinalEtaSv2_newRegV1/DoubleEG-ZSkim-Run2016B-07Aug17_ver2/273150-275376/271036-284044_PromptReco/pedNoise/DoubleEG-ZSkim-Run2016B-07Aug17_ver2-273150-275376.root");
+        ROOT::EnableImplicitMT();
+        ROOT::RDataFrame df("selected", input_files);
+        //ROOT::RDataFrame df("selected", "/home/ferri/data/ecalelf/ntuples/13TeV/ALCARERECO/103X_dataRun2_v6_ULBaseForICs_FinalEtaSv2_newRegV1/DoubleEG-ZSkim-Run2016B-07Aug17_ver2/273150-275376/271036-284044_PromptReco/pedNoise/DoubleEG-ZSkim-Run2016B-07Aug17_ver2-273150-275376.root");
 
         // selections
 
