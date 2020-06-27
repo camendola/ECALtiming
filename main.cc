@@ -26,7 +26,8 @@ ROOT::RVec<float> time_correction_vtx(float z, RVec_f eta, RVec_f t)
 
 std::vector<unsigned int> retrieve_run_list(ROOT::RDF::RNode df, int year)
 {
-        FILE * fd = fopen("runs_" + std::to_string(year) + ".list", "r");
+        std::string fname = "runs_" + std::to_string(year) + ".list";
+        FILE * fd = fopen(fname.c_str(), "r");
         std::vector<unsigned int> run_list;
         if (!fd) {
                 ROOT::RDF::RResultPtr<std::vector<unsigned int> > runs = df.Take<unsigned int>("runNumber");
@@ -35,7 +36,7 @@ std::vector<unsigned int> retrieve_run_list(ROOT::RDF::RNode df, int year)
                 auto last = std::unique(tmp.begin(), tmp.end());
                 tmp.erase(last, tmp.end());
                 run_list = std::move(tmp);
-                FILE * fd = fopen("runs.list", "w");
+                FILE * fd = fopen(fname.c_str(), "w");
                 for (auto & r : run_list) fprintf(fd, "%d\n", r);
                 fclose(fd);
         } else {
