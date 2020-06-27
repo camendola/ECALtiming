@@ -243,7 +243,7 @@ int main (int argc, char ** argv)
         hc_g.emplace_back(g_dt_mean_run);
 
         // save histograms
-        auto fout = TFile::Open("out_plots.root", "recreate");
+        auto fout = TFile::Open(("out_plots_" + std::to_string(year) + ".root").c_str(), "recreate");
         for (auto h : hc_h1d) h->Write(); 
         for (auto h : hc_h2d) h->Write(); 
         for (auto p : hc_p)   p->Write(); 
