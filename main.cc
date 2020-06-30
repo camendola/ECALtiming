@@ -9,7 +9,8 @@
 
 #include "modules/functions.cc"
 
-#define debug        0
+#include "modules/cxxopts.hpp" // v2.2.0 from https://github.com/jarro2783/cxxopts
+
 #define eb_threshold "1.479"
 
 using RVec_f = const ROOT::RVec<float> &;
@@ -29,7 +30,7 @@ std::vector<unsigned int> retrieve_run_list(ROOT::RDF::RNode df, int year)
         std::string fname = "runs_" + std::to_string(year) + ".list";
         FILE * fd = fopen(fname.c_str(), "r");
         std::vector<unsigned int> run_list;
-        if (!fd) {
+        if (!fd || year == -1) {
                 ROOT::RDF::RResultPtr<std::vector<unsigned int> > runs = df.Take<unsigned int>("runNumber");
                 auto tmp = runs.GetValue();
                 std::sort(tmp.begin(), tmp.end());
@@ -71,18 +72,49 @@ std::vector<std::string> retrieve_files(int year)
 
 int main (int argc, char ** argv)
 {
-        // ridiculously rudimental support for options
-        int year = 2016; // default
-        if (argc > 1) {
-                year = std::stoi(argv[1]);
+        cxxopts::Options options("a.out", "ECAL timing analysis");
+
+        options.add_options()
+                ("d,debug", "enable debugging printouts", cxxopts::value<bool>()->default_value("false"))
+                ("y,year",  "years to process",           cxxopts::value<std::vector<int> >())
+                ("i,input", "input files to process",     cxxopts::value<std::vector<std::string> >())
+                ("h,help",  "print this usage and exit")
+                ;
+
+        auto opts = options.parse(argc, argv);
+
+        if (opts.count("help")) {
+                std::cout << options.help() << std::endl;
+                exit(0);
         }
 
-        std::vector<std::string> input_files = retrieve_files(year);
+        // debug might also be declared global if needed in some external functions
+        // and initialized here
+        bool debug = opts["debug"].as<bool>();
+
+        // retrieving input files either from the specified year(s) or
+        // from a provided comma-separated list of input file names
+        std::vector<int> year;
+        std::vector<std::string> input_files;
+        if (opts.count("year")) {
+                year = opts["year"].as<std::vector<int>>();
+                for (auto y : year) {
+                        auto v = retrieve_files(y);
+                        input_files.insert(input_files.end(), v.begin(), v.end());
+                }
+        } else if (opts.count("input")) {
+                input_files = opts["input"].as<std::vector<std::string>>();
+        } else {
+                std::cerr << "error: please specify one option between `year' and `input'\n";
+                std::cout << options.help() << std::endl;
+                exit(1); 
+        }
+
+        std::cout << "Going to analyze the following files:\n";
         for (auto & s : input_files) std::cout << s << "\n";
 
         ROOT::EnableImplicitMT();
         ROOT::RDataFrame df("selected", input_files);
-        //ROOT::RDataFrame df("selected", "/home/ferri/data/ecalelf/ntuples/13TeV/ALCARERECO/103X_dataRun2_v6_ULBaseForICs_FinalEtaSv2_newRegV1/DoubleEG-ZSkim-Run2016B-07Aug17_ver2/273150-275376/271036-284044_PromptReco/pedNoise/DoubleEG-ZSkim-Run2016B-07Aug17_ver2-273150-275376.root");
 
         // selections
 
@@ -166,7 +198,18 @@ int main (int argc, char ** argv)
         // if a run_list file does not exists, compute it
         // N.B. the copy to vector triggers lazy actions, so better to be run only
         // when necessary, and use the values cached in a file otherwise
-        std::vector<unsigned int> run_list = retrieve_run_list(comm, year);
+        std::vector<unsigned int> run_list;
+        if (year.size()) {
+                for (auto y : year) {
+                        auto v = retrieve_run_list(comm, y);
+                        run_list.insert(run_list.end(), v.begin(), v.end());
+                }
+        } else {
+                // if no year provided, recompute it every time
+                // FIXME: support for a run list provided via command line options?
+                run_list = retrieve_run_list(comm, -1);
+        }
+
         //for (auto & r : run_list) std::cout << r << "\n";
 
         // delta_t vs effective amplitude
@@ -246,7 +289,9 @@ int main (int argc, char ** argv)
         hc_g.emplace_back(g_dt_mean_run);
 
         // save histograms
-        auto fout = TFile::Open(("out_plots_" + std::to_string(year) + ".root").c_str(), "recreate");
+        std::string s = "";
+        for (auto y : year) s += "_" + std::to_string(y);
+        auto fout = TFile::Open(("out_plots" + s + ".root").c_str(), "recreate");
         for (auto h : hc_h1d) h->Write(); 
         for (auto h : hc_h2d) h->Write(); 
         for (auto p : hc_p)   p->Write(); 
