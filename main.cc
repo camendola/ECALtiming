@@ -78,6 +78,8 @@ int main (int argc, char ** argv)
                 ("d,debug", "enable debugging printouts", cxxopts::value<bool>()->default_value("false"))
                 ("y,year",  "years to process",           cxxopts::value<std::vector<int> >())
                 ("i,input", "input files to process",     cxxopts::value<std::vector<std::string> >())
+                ("m,minimal", "the input tree contains only the minimal variables for the analysis", cxxopts::value<bool>()->default_value("false"))
+                ("s,snapshot", "save a snapshot tree after common selections, containing the minimal variables needed in the analysis, and exit", cxxopts::value<bool>()->default_value("false"))
                 ("h,help",  "print this usage and exit")
                 ;
 
@@ -91,6 +93,9 @@ int main (int argc, char ** argv)
         // debug might also be declared global if needed in some external functions
         // and initialized here
         bool debug = opts["debug"].as<bool>();
+
+        bool minimal = opts["minimal"].as<bool>();
+        bool snapshot = opts["snapshot"].as<bool>();
 
         // retrieving input files either from the specified year(s) or
         // from a provided comma-separated list of input file names
@@ -148,26 +153,48 @@ int main (int argc, char ** argv)
         //for (auto & el : df.GetColumnNames()) std::cout << el << "\n";
 
         // new quantities
-        auto fn = df.Define("delta_t_ee", "timeSeedSC[0] - timeSeedSC[1]")
-                    .Define("delta_eta_ee", "etaSCEle[0] - etaSCEle[1]")
-                    .Define("delta_phi_ee", "ROOT::VecOps::DeltaPhi(phiSCEle[0], phiSCEle[1])")
-                    .Define("t_e0", "timeSeedSC[0]")
-                    .Define("t_e1", "timeSeedSC[0]")
-                    .Define("delta_t_e0", "timeSeedSC[0] - timeSecondToSeedSC[0]")
-                    .Define("delta_t_e1", "timeSeedSC[1] - timeSecondToSeedSC[1]")
-                    .Define("delta_a_e0", "amplitudeSeedSC[0] - amplitudeSecondToSeedSC[0]")
-                    .Define("delta_a_e1", "amplitudeSeedSC[1] - amplitudeSecondToSeedSC[1]")
-                    .Define("aeff_e0", "amplitudeSeedSC[0] / noiseSeedSC[0]")
-                    .Define("aeff_e1", "amplitudeSeedSC[1] / noiseSeedSC[1]")
-                    .Define("aeff_ee", "aeff_e0 * aeff_e1 / sqrt(aeff_e0 * aeff_e0 + aeff_e1 * aeff_e1)")
-                    .Define("t_seed_corr", time_correction_vtx, {"vtxZ", "etaSCEle", "timeSeedSC"})
-                    .Define("t_seed_corr_e0", "t_seed_corr[0]")
-                    .Define("t_second_to_seed_corr", time_correction_vtx, {"vtxZ", "etaSCEle", "timeSecondToSeedSC"})
-                    .Define("delta_t_e_corr", "t_seed_corr - t_second_to_seed_corr")
-                    .Define("delta_t_ee_corr", "t_seed_corr[0] - t_seed_corr[1]");
+        ROOT::RDF::RNode fn = df, comm = df;
+        if (!minimal) {
+                fn = df.Define("delta_t_ee", "timeSeedSC[0] - timeSeedSC[1]")
+                        .Define("delta_eta_ee", "etaSCEle[0] - etaSCEle[1]")
+                        .Define("delta_phi_ee", "ROOT::VecOps::DeltaPhi(phiSCEle[0], phiSCEle[1])")
+                        .Define("t_e0", "timeSeedSC[0]")
+                        .Define("t_e1", "timeSeedSC[0]")
+                        .Define("delta_t_e0", "timeSeedSC[0] - timeSecondToSeedSC[0]")
+                        .Define("delta_t_e1", "timeSeedSC[1] - timeSecondToSeedSC[1]")
+                        .Define("delta_a_e0", "amplitudeSeedSC[0] - amplitudeSecondToSeedSC[0]")
+                        .Define("delta_a_e1", "amplitudeSeedSC[1] - amplitudeSecondToSeedSC[1]")
+                        .Define("aeff_e0", "amplitudeSeedSC[0] / noiseSeedSC[0]")
+                        .Define("aeff_e1", "amplitudeSeedSC[1] / noiseSeedSC[1]")
+                        .Define("aeff_ee", "aeff_e0 * aeff_e1 / sqrt(aeff_e0 * aeff_e0 + aeff_e1 * aeff_e1)")
+                        .Define("t_seed_corr", time_correction_vtx, {"vtxZ", "etaSCEle", "timeSeedSC"})
+                        .Define("t_seed_corr_e0", "t_seed_corr[0]")
+                        .Define("t_second_to_seed_corr", time_correction_vtx, {"vtxZ", "etaSCEle", "timeSecondToSeedSC"})
+                        .Define("delta_t_e_corr", "t_seed_corr - t_second_to_seed_corr")
+                        .Define("delta_t_ee_corr", "t_seed_corr[0] - t_seed_corr[1]")
+                        .Define("year", "runNumber >= 273158 && runNumber <= 284044 ? 2016 :"
+                                "runNumber >= 297050 && runNumber <= 306460 ? 2017 :"
+                                "runNumber >= 315257 && runNumber <= 325172 ? 2018 : 0");
 
-        // reasonable quality selections and no gain switch
-        auto comm = fn.Filter(z_mass, "Z mass").Filter(high_r9, "high R9").Filter(clean_ee, "delta_t_ee").Filter(no_saturation, "no sat.");
+                // reasonable quality selections and no gain switch
+                comm = fn.Filter(z_mass, "Z mass").Filter(high_r9, "high R9").Filter(clean_ee, "delta_t_ee").Filter(no_saturation, "no sat.");
+        }
+
+        // save a snapshot of the variables used in the analysis
+        // for faster reload
+        if (snapshot) {
+                if (debug) std::cout << "Going to snapshot...\n";
+                auto sn = comm.Snapshot("selected", "snapshot.root", {"runNumber", "eventNumber", "eventTime", "year",
+                              "etaSCEle", "phiSCEle", "vtxZ",
+                              "t_seed_corr_e0",
+                              "aeff_ee", "t_e0", "t_e1", "delta_t_e_corr", "delta_t_ee_corr"});
+                if (debug) std::cout << "...done\n";
+                return 0;
+        }
+        /*
+         * below this point, all the used variables need to be also in the snapshot list
+         * to make the `minimal' option works
+         */
 
         // histogram and graph collectors
         std::vector<ROOT::RDF::RResultPtr<TH1D> > hc_h1d;
