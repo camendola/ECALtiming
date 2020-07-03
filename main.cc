@@ -76,9 +76,10 @@ int main (int argc, char ** argv)
 
         options.add_options()
                 ("d,debug", "enable debugging printouts", cxxopts::value<bool>()->default_value("false"))
-                ("y,year",  "years to process",           cxxopts::value<std::vector<int> >())
+                ("y,year",  "years to process (comma separated list)",           cxxopts::value<std::vector<int> >())
                 ("i,input", "input files to process",     cxxopts::value<std::vector<std::string> >())
                 ("m,minimal", "the input tree contains only the minimal variables for the analysis", cxxopts::value<bool>()->default_value("false"))
+                ("r,runlist", "runs to process (comma separated list)", cxxopts::value<std::vector<unsigned int> >())
                 ("s,snapshot", "save a snapshot tree after common selections, containing the minimal variables needed in the analysis, and exit", cxxopts::value<bool>()->default_value("false"))
                 ("h,help",  "print this usage and exit")
                 ;
@@ -226,14 +227,15 @@ int main (int argc, char ** argv)
         // N.B. the copy to vector triggers lazy actions, so better to be run only
         // when necessary, and use the values cached in a file otherwise
         std::vector<unsigned int> run_list;
-        if (year.size()) {
+        if (opts.count("runlist")) {
+                run_list = opts["runlist"].as<std::vector<unsigned int>>();
+        } else if (year.size()) {
                 for (auto y : year) {
                         auto v = retrieve_run_list(comm, y);
                         run_list.insert(run_list.end(), v.begin(), v.end());
                 }
         } else {
-                // if no year provided, recompute it every time
-                // FIXME: support for a run list provided via command line options?
+                // if no year and no runlist provided, recompute it
                 run_list = retrieve_run_list(comm, -1);
         }
 
