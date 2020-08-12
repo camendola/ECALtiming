@@ -1,7 +1,10 @@
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import modules.compute_variables as compute
+import pandas as pd
+import numpy as np
 
-class histo1D:
+class histo1d:
 	def __init__(self, var, config):
 		self.var = var
 		self.binning    = self.get_binning(config)
@@ -74,7 +77,7 @@ class histo1D:
 
 
 
-class histo2D:
+class histo2d:
 	def __init__(self, var, config):
 		varx, vary, name = var.split(':')
 		self.varx = varx.strip()
@@ -115,3 +118,96 @@ class histo2D:
 			else:
 				plot = plt.hist2d(df[self.varx], df[self.vary], bins = [self.xbinning[0],self.ybinning[0]], range = [self.xbinning[-2:], self.ybinning[-2:]])
 		return plot
+
+
+
+
+class graph:
+	def __init__(self, var, config):
+		varx, vary = var.split(':')
+		self.var = var
+		self.varx = varx.strip()
+		self.vary = vary.strip()
+		self.name = self.vary+'_vs_'+self.varx
+		self.binning    = self.get_binning(config)
+		self.selections = self.get_selections(config)
+		self.options    = self.get_options(config)
+
+	def get_binning(self, config):
+		binning = []
+		if self.var in config.config["grmarkerwidth"]:
+                    cfg_binning = config.readOption("grmarkerwidth::"+self.var).split(",")
+                    if len(cfg_binning) == 3:
+                        bins, xmin, xmax = cfg_binning
+                        xmin = float(xmin.strip())
+                        xmax = float(xmax.strip())
+                        bins = float(bins.strip())
+                        width = (xmax-xmin)/bins
+                        binning = np.arange(xmin, xmax+float(width), float(width))
+                    else:
+                        binning = np.asarray(cfg_binning, dtype=np.float32)
+		return binning 
+	
+	def get_selections(self, config):
+		if self.var in config.config["grselections"]: 
+			selections = config.readOption("grselections::"+self.var).split(",")
+		else:
+			selections = ["all"]
+		return [sel.strip() for sel in selections]
+	
+	def get_options(self, config):
+		if self.var in config.config['groptions']:
+			options = config.readOption("groptions::"+self.var).split(",")
+		return [opt.strip() for opt in options]
+	
+	def plot(self, df, aggr_var):
+		if len(self.binning) > 0:
+			graph = df.groupby(pd.cut(df[self.varx], self.binning[:-1]))[self.vary]
+		else:
+			graph = df.groupby(self.varx)[self.vary]
+
+		print(graph)
+		if hasattr(compute, aggr_var):
+			aggr_graph = graph.agg(getattr(compute, aggr_var))
+		elif hasattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var):
+			aggr_graph = getattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var)(graph)
+		else: 
+			print ("### WARNING: ", aggr_var, " not defined, skipping")
+		print (aggr_graph)
+		plot = aggr_graph.plot()
+		return plot
+	
+
+
+class map2d:
+	def __init__(self, var, config):
+		varx, vary, varz = var.split(':')
+		self.var = var
+		self.varx = varx.strip()
+		self.vary = vary.strip()
+		self.varz = varz.strip()
+		self.name = self.varz+"_"+self.vary+'_vs_'+self.varx
+		self.selections = self.get_selections(config)
+		self.options    = self.get_options(config)
+
+	def get_selections(self, config):
+		if self.var in config.config["mselections"]: 
+			selections = config.readOption("mselections::"+self.var).split(",")
+		else:
+			selections = ["all"]
+		return [sel.strip() for sel in selections]
+	
+	def get_options(self, config):
+		if self.var in config.config['moptions']:
+			options = config.readOption("moptions::"+self.var).split(",")
+		return [opt.strip() for opt in options]
+	
+	def plot(self, df, aggr_var):
+		if hasattr(compute, aggr_var):
+			table = pd.pivot_table(df, index=self.vary, columns=self.varx, values=self.varz, aggfunc=getattr(compute, aggr_var)) 
+		elif hasattr(np, aggr_var):
+			table = pd.pivot_table(df, index=self.vary, columns=self.x, values=self.varz, aggfunc=getattr(np, aggr_var))  
+		table.dropna() 
+		table.dropna(axis=1) 
+		return plot
+	

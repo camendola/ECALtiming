@@ -177,7 +177,7 @@ for var in toPlot:
 ### 1D histograms
 if hvarList:
     for hvar in hvarList:
-        h = obj.histo1D(hvar,config)
+        h = obj.histo1d(hvar,config)
         for s in h.selections: 
             s_name = h.var+'_'+s.replace('-',"_")
             df_this = select.apply_selection(df_chain, s)
@@ -193,7 +193,7 @@ if hvarList:
 ### 2D histograms
 if hvar2DList:
     for hvars in hvar2DList:
-        h = obj.histo2D(hvars, config)
+        h = obj.histo2d(hvars, config)
         for s in h.selections:
             s_name = h.name+'_'+s.replace('-',"_")
             df_this = select.apply_selection(df_chain, s)
@@ -203,96 +203,46 @@ if hvar2DList:
             del df_this
             gc.collect()
 
-if config.hasOption("general::grvariables"):
+### graphs
+if grList:
     for grvar in grList:
-        if grvar in config.config["grselections"]: 
-            grselections = config.readOption("grselections::"+grvar).split(",")
-        else:
-            grselections = ["all"]
-        xvar , yvar = grvar.split(":")
-        for grselection in grselections:
-            grselection = grselection.strip()
-            df_this = select.apply_selection(df_chain,grselection)
-            if grvar in config.config["groptions"]:
-                gropts = config.readOption("groptions::"+grvar).split(",")
-                custom_binning = False
-                binning = []
-                mid = []
-                if grvar in config.config["grmarkerwidth"]: 
-                    custom_binning = True
-                    cfg_binning = config.readOption("grmarkerwidth::"+grvar).split(",")
-                    if len(cfg_binning) == 3:
-                        bins, xmin, xmax = cfg_binning
-                        xmin = float(xmin.strip())
-                        xmax = float(xmax.strip())
-                        bins = float(bins.strip())
-                        width = (xmax-xmin)/bins
-                        binning = np.arange(xmin, xmax+float(width), float(width))
-                    else:
-                        binning = np.asarray(cfg_binning, dtype=np.float32)
-                for opt in gropts:
-                    opt = opt.strip()
-                    if "aggr" in opt:
-                        aggr_var = opt.split(":")
-                        aggr_var = aggr_var[1:]
-                        if not custom_binning:
-                            graph = df_this.groupby(xvar)[yvar]
-                            if hasattr(compute, aggr_var[0]):
-                                aggr_graph = graph.agg(getattr(compute, aggr_var[0]))
-                            elif hasattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var[0]):
-                                aggr_graph = getattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var[0])(graph)
-                            #aggr_graph = graph.agg(aggr_var)
-                        else: 
-                            mid = (binning[1:] + binning[:-1]) / 2
-                            graph = df_this.groupby(pd.cut(df_this[xvar], binning))[yvar]
-                        if hasattr(compute, aggr_var[0]):
-                            aggr_graph = graph.agg(getattr(compute, aggr_var[0]))
-                        elif hasattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var[0]):
-                            aggr_graph = getattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var[0])(graph)
-                        else:
-                            print("### WARNING: ", aggr_var[0], " not defined, skipping")
-                            continue
-                        name = yvar+'_vs_'+xvar
-                        for i in aggr_var:
-                            aggr_name = i+"_"
-                        name = aggr_name + name
-                        plot = aggr_graph.plot()
-                        plot = plt_to_TGraph(plot,name+"_"+grselection.replace('-',"_"), mid, binning)
-                        plt.close()
-                        plot.Write()
-                    else:
-                        plot = df_chain.plot(xvar,yvar)
-                        plot = plt_to_TGraph(plot,name)  
-                        plt.close()
-                        plot.Write()
-            del df_this
+        gr = obj.graph(grvar, config)
+        for s in gr.selections:
+            s_name = gr.name+'_'+s.replace('-',"_")
+            df_this = select.apply_selection(df_chain, s)
+            for opt in gr.options: 
+                if not "aggr" in opt: 
+                    print("### WARNING only aggregate options are implemented for graphs, skipping ", opt)
+                    continue
+                print(opt.split(":")[1:])
+                if len(opt.split(":")[1:]) > 1: print("### WARNING multiple aggregate variables not implemented, using ", opt.split(":")[1])
+                aggr_var = opt.split(":")[1]
+                print(df_this)
+                plot_root = plt_to_TGraph(gr.plot(df_this, aggr_var), aggr_var + "_" + s_name, gr.binning)
+                plot_root.Write()
+                plt.close()               
 
-if config.hasOption("general::mvariables"):
-    for mvars in mapList:
-        mvarx, mvary, mvarz = mvars.split(':')
-        if mvars in config.config["mselections"]: 
-            mselections = config.readOption("mselections::"+mvars).split(",")
-        else:
-            mselections = ["all"]
-        for mselection in mselections:
-            mselection = mselection.strip()    
-            df_this = select.apply_selection(df_chain, mselection)
-            if mvars in config.config["moptions"]:
-                mopts = config.readOption("moptions::"+mvars).split(",")
-                for opt in mopts:
-                    opt = opt.strip()
-                    if "aggr" in opt:                        
-                        aggr_var = opt.split(":")
-                        aggr_var = aggr_var[1:]
-                        name = mvary+'_vs_'+mvarx
-                        name = aggr_var[0] + '_'+ mvarz +"_"+ name
-                        table = pd.pivot_table(df_this, index=mvary, columns=mvarx, values=mvarz, aggfunc=getattr(np, aggr_var[0]))
-                        table.dropna()
-                        table.dropna(axis=1)
-                        #print(table)
-                        plot_root = table_to_TH2(table, name +'_'+mselection.replace('-',"_"))
-                        plot_root.Write()
             del df_this
+            gc.collect()
+
+### maps
+if mapList:
+    for mvars in mapList:
+        map2d = obj.graph(grvar, config)
+        for s in map2d.selections:
+            s_name = map2d.name+'_'+s.replace('-',"_")
+            df_this = select.apply_selection(df_chain, s)
+            for opt in gr.options: 
+                if not "aggr" in opt: 
+                    print("### WARNING only aggregate options are implemented for maps, skipping ", opt)
+                    continue
+                print(opt.split(":")[1:])
+                if len(opt.split(":")[1:]) > 1: print("### WARNING multiple aggregate variables not implemented, using ", opt.split(":")[1])
+                aggr_var = opt.split(":")[1]
+                plot_root = table_to_TH2(map2d.plot(df_this, aggr_var), s_name)
+                plot_root.Write()
+            del df_this
+            gc.collect()
 
 outFile.Close()
 

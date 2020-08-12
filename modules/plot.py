@@ -63,16 +63,16 @@ def table_to_TH2(table, name):
 
     return hist
 
-def plt_to_TGraph(plot, name="", labels = None, binwidth = None):
+def plt_to_TGraph(plot, name="", binning = None):
     print ("@ graph: ", name) 
     x = plot.lines[0].get_xdata()
     y = plot.lines[0].get_ydata()
-    if len(labels) > 0 : x = labels
-    x = np.asarray(x,dtype=np.float64) 
-    y = np.asarray(y,dtype=np.float64) 
-    if len(binwidth) > 0:
-        ex = np.asarray((binwidth[1:] - binwidth[:-1]) / 2, dtype=np.float64)
-        graph = ROOT.TGraphErrors(len(x), x , y, ex,    np.zeros(len(x)))
+    x = np.asarray(x, dtype=np.float64) 
+    y = np.asarray(y, dtype=np.float64) 
+    if len(binning) > 0:
+        x =  np.asarray((binning[1:] + binning[:-1]) / 2, dtype=np.float64)
+        ex = np.asarray((binning[1:] - binning[:-1]) / 2, dtype=np.float64)
+        graph = ROOT.TGraphErrors(len(x), x , y, ex, np.zeros(len(x)))
     else:
         graph = ROOT.TGraph(len(x), x , y)
     
