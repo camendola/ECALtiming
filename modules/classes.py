@@ -33,9 +33,11 @@ class histo1d:
 	
 	def plot(self, df):
 		if len(self.binning) > 0:
-		    plot = plt.hist(df[self.var], self.binning[0], range = self.binning[-2:])
+		    #plot = plt.hist(df[self.var], self.binning[0], range = self.binning[-2:])
+			plot = plt.hist(df, self.binning[0], range = self.binning[-2:])
 		else: 
-		    plot = plt.hist(df[self.var])
+			#plot = plt.hist(df[self.var])
+			plot = plt.hist(df)
 		return plot
 	
 	def outlier_aware_hist(self, df):
@@ -45,7 +47,7 @@ class histo1d:
 	
 		nbins = self.binning[0]
 		lower , upper = self.binning[-2:]
-		data = df[self.var]
+		data = df #[self.var]
 		
 		if not lower or (lower < (data.min())):
 			lower = data.min()
@@ -160,25 +162,62 @@ class graph:
 			options = config.readOption("groptions::"+self.var).split(",")
 		return [opt.strip() for opt in options]
 	
-	def plot(self, df, aggr_var):
+
+	def plot(self, df, aggr_var, args, size):
+		if args.byrun: 
+			return plot_byrun(df,aggr_var)
+		elif args.byrunsize:		
+			return plot_byrunsize(df,aggr_var,size)
+		elif args.bysize:		
+			return plot_bysize(df,aggr_var,size)
+		else: 
+			return plot_simple(df,aggr_var)
+	
+
+	def plot_simple(self, df, aggr_var):
 		if len(self.binning) > 0:
 			graph = df.groupby(pd.cut(df[self.varx], self.binning[:-1]))[self.vary]
 		else:
 			graph = df.groupby(self.varx)[self.vary]
-
-		print(graph)
 		if hasattr(compute, aggr_var):
 			aggr_graph = graph.agg(getattr(compute, aggr_var))
 		elif hasattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var):
 			aggr_graph = getattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var)(graph)
 		else: 
 			print ("### WARNING: ", aggr_var, " not defined, skipping")
-		print (aggr_graph)
 		plot = aggr_graph.plot()
 		return plot
 	
+	def plot_byrun(self, df, aggr_var):
+		graph = df.groupby('runNumber')[self.vary]
+		if hasattr(compute, aggr_var):
+			aggr_graph = graph.agg(getattr(compute, aggr_var))
+		elif hasattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var):
+			aggr_graph = getattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var)(graph)
+		plot = aggr_graph.plot()
+		return plot 
 
+	def plot_byrunsize(self, df, aggr_var, size):
+		graph = df.groupby(['runNumber', df.groupby('runNumber').cumcount() // size])[self.varx, self.vary]
+		if hasattr(compute, aggr_var):
+			aggr_graph = graph.agg({self.varx:'mean', self.vary:getattr(compute, aggr_var)})
+		elif hasattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var):
+			aggr_graph = graph.agg({self.vary:aggr_var})
+			aggr_graph = aggr_graph.droplevel(0, axis=1)
+		plot = aggr_graph.plot(x = self.varx, y = self.vary)
+		return plot
 
+	def plot_bysize(self, df, aggr_var, size):
+		graph = df.groupby(np.arange(len(df)) // size)[self.varx, self.vary]
+		if hasattr(compute, aggr_var):
+			aggr_graph = graph.agg({self.varx:'mean', self.vary:getattr(compute, aggr_var)})
+		elif hasattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var):
+			aggr_graph = graph.agg({self.vary:aggr_var})
+			aggr_graph = aggr_graph.droplevel(0, axis=1)
+		plot = aggr_graph.plot(x = self.varx, y = self.vary)
+		return plot
+
+		
 class map2d:
 	def __init__(self, var, config):
 		varx, vary, varz = var.split(':')
@@ -206,7 +245,7 @@ class map2d:
 		if hasattr(compute, aggr_var):
 			table = pd.pivot_table(df, index=self.vary, columns=self.varx, values=self.varz, aggfunc=getattr(compute, aggr_var)) 
 		elif hasattr(np, aggr_var):
-			table = pd.pivot_table(df, index=self.vary, columns=self.x, values=self.varz, aggfunc=getattr(np, aggr_var))  
+			table = pd.pivot_table(df, index=self.vary, columns=self.varx, values=self.varz, aggfunc=getattr(np, aggr_var))  
 		table.dropna() 
 		table.dropna(axis=1) 
 		return plot

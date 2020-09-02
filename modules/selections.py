@@ -77,6 +77,13 @@ def longrun(df): #a 2017 run with >500/pb
 	mask = (df.runNumber == 306125)
 	return df[mask]
 
+def Early2018(df): 
+	mask = (df.runNumber < 320000)
+	return df[mask]
+def Late2018(df): 
+	mask = (df.runNumber > 320000)
+	return df[mask]
+	
 #physics
 def isOS(df):
 	mask = ((abs(df.chargeEle1) == 1) & (df.chargeEle1 == - df.chargeEle2))
@@ -104,11 +111,8 @@ def Run1Sel_e1(df):
 	return df[mask]
 
 def Run1Sel_ee(df):
-	mask = (((df.amplitudeSeedSC1  * np.where(abs(df.etaSCEle1) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) < 120) 
-			& ((df.amplitudeSeedSC2 * np.where(abs(df.etaSCEle2) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) < 120) 
-			& ((df.amplitudeSeedSC1 * np.where(abs(df.etaSCEle1) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) > 10) 
-			& ((df.amplitudeSeedSC2 * np.where(abs(df.etaSCEle2) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) > 10) 
-			& (df.invMass > 60) & (df.invMass < 150))
+	mask =  ((df.invMass > 60) & (df.invMass < 150) 
+		& (df.gainSeedSC1 == 0) & (df.gainSeedSC2 == 0) & (abs(df.timeSeedSC1 - df.timeSeedSC2) < 5))
 	return df[mask]
 
 def AeffLow_ee(df):
@@ -126,18 +130,56 @@ def AeffHigh_ee(df):
 def AeffHigh_e1(df):
 	mask = df.effA_e1_seeds >= 500
 	return df[mask]
-	
+
+
+def AeffVHigh_ee(df):
+	mask = df.effA_ee >= 700
+	return df[mask]
+
+def AeffVHigh_e1(df):
+	mask = df.effA_e1_seeds >= 700
+	return df[mask]
+
+
+def Fill2018(df):
+	mask = ((df.runNumber >= 319575) & (df.runNumber <= 319579))
+	return df[mask]
+
+def Fill2017(df):
+	mask = ((df.runNumber >= 306151) & (df.runNumber <= 306171))
+	return df[mask]
+
+def Fill2016(df):
+	mask = ((df.runNumber >= 275809) & (df.runNumber <= 275848))
+	return df[mask]
+
+def sameRO(df):
+	mask = ((df.iTTSeedSC1 == df.iTTSecondToSeedSC1) & (df.scSeedSC1 == df.scSecondToSeedSC1))
+	return df[mask]
+
+def diffRO(df):
+	mask = ((df.iTTSeedSC1 != df.iTTSecondToSeedSC1))
+	return df[mask]
+
+
+def HighEta_e1(df):
+	mask = ((df.etaEle1 > 1.3) & (df.etaEle1 < 1.5))
+	return df[mask]
+
+def LowEta_e1(df):
+	mask = ((df.etaEle1 < - 1.3) & (df.etaEle1 > - 1.5))
+	return df[mask]
+
 #def Run1Sel_e1(df):
-#	mask = (((df.energySeedSC1) < 120) 
-#			& ((df.energySecondToSeedSC1) < 120) 
+#	mask = (((df.ele1E) < 120) 
 #			& (abs(df.energySeedSC1.div(df.energySecondToSeedSC1))< 1.2))
 #	return df[mask]
 #
 #def Run1Sel_ee(df):
-#	mask = (((df.energySeedSC1) < 120) 
-#			& ((df.energySeedSC2) < 120) 
-#			& ((df.energySeedSC1) > 10) 
-#			& ((df.energySeedSC2) > 10) 
+#	mask = (((df.ele1E) < 120) 
+#			& ((df.ele2E) < 120) 
+#			& ((df.ele1E) > 10) 
+#			& ((df.ele2E) > 10) 
 #			& (df.invMass > 60) & (df.invMass < 150))
 #	return df[mask]
 

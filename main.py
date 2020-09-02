@@ -27,6 +27,10 @@ parser = argparse.ArgumentParser(description='Command line parser of plotting op
 parser.add_argument('--year', type = int, dest='year', help='which year', default=2016)
 parser.add_argument('--tag', dest='tag', help='tag for plot', default=None)
 parser.add_argument('--cfg', dest='cfg', help='cfg file', default=None)
+parser.add_argument('--byrun', dest='byrun', help='split graphs by run only', default=False, action ='store_true')
+parser.add_argument('--byrunsize', dest='byrunsize', help='split graphs by run and by size', default=False, action ='store_true')
+parser.add_argument('--bysize', dest='bysize', help='split graphs by size only', default=False, action ='store_true')
+parser.add_argument('-e', '--era', default = None, help="era")
 parser.add_argument('--debug', dest='debug', help='debug', default=False, action ='store_true')
 
 args = parser.parse_args()
@@ -45,14 +49,24 @@ if year ==2018:
 files = [line. rstrip('\n') for line in open(fileList)]
 files_extra = [line. rstrip('\n') for line in open(fileList_extra)]
 
+newfiles = []
+if args.era:
+    for file in files:
+        if str(args.year)+args.era in file:
+            newfiles.append(file)
+    files = newfiles
 
 debug = args.debug
 
 if debug:
-    files = files[-1:] #files[:1]
-    files_extra = files_extra[:1]
+    files = files[-1:] 
+    files_extra = files_extra[-1:]
 
 print("*** Processing year "+str(args.year))
+if args.byrun:     print("*** splitting graphs by run")
+if args.byrunsize: print("*** splitting graphs by number of events, respecting the run boundaries")
+if args.bysize:    print("*** splitting graphs by number of events")
+
 
 ### ECALELF original content:
 #['runNumber', 'lumiBlock', 'eventNumber', 'eventTime', 'nBX', 'isTrain', 'mcGenWeight', 'HLTfire', 
@@ -71,61 +85,73 @@ print("*** Processing year "+str(args.year))
 #'invMass_rawSC', 'invMass_rawSC_esSC', 'invMass_highEta', 'ele1E', 'ele2E', 'ele1ecalE', 'ele2ecalE', 'angleEle12']
 
 
-branches = ['runNumber','etaSCEle','phiSCEle',
-            'xSeedSC','ySeedSC','etaEle','vtxZ',
-            'R9Ele', 
-            'timeSeedSC','timeSecondToSeedSC','amplitudeSeedSC', 'amplitudeSecondToSeedSC',
-            'energySeedSC', 'energySecondToSeedSC', 'noiseSeedSC',
-            'invMass','ele1E', 'ele2E']
-branches_extra = ['noiseSeedSC1_GT', 'noiseSeedSC2_GT', 'runNumber', 'noiseSecondToSeedSC1_GT','iTTSeedSC1', 'scSeedSC1','iTTSecondToSeedSC1', 'scSecondToSeedSC1',]
+#branches = ['runNumber','etaSCEle','phiSCEle',
+#            'xSeedSC','ySeedSC','etaEle','vtxZ',
+#            'R9Ele', 
+#            'timeSeedSC','timeSecondToSeedSC','amplitudeSeedSC', 'amplitudeSecondToSeedSC',
+#            'energySeedSC', 'energySecondToSeedSC', 'noiseSeedSC',
+#            'invMass','ele1E', 'ele2E', 'eventTime']
+
+branches = ['runNumber','etaSCEle1','etaSCEle2', 'phiSCEle1','phiSCEle2', 
+            'xSeedSC1','xSeedSC2','ySeedSC1','ySeedSC2', 'etaEle1','etaEle2','vtxZ',
+            'R9Ele1', 'R9Ele2',
+            'timeSeedSC1','timeSeedSC2', 'timeSecondToSeedSC1','timeSecondToSeedSC2','amplitudeSeedSC1', 'amplitudeSeedSC2','amplitudeSecondToSeedSC1','amplitudeSecondToSeedSC2',
+            'energySeedSC1', 'energySeedSC2','energySecondToSeedSC1','energySecondToSeedSC2', 'noiseSeedSC1','noiseSeedSC2',
+            'invMass','ele1E', 'ele2E', 'eventTime']
+
+branches_extra = ['noiseSeedSC1_GT', 'noiseSeedSC2_GT', 'eventTime', 'noiseSecondToSeedSC1_GT','iTTSeedSC1', 'scSeedSC1','iTTSecondToSeedSC1', 'scSecondToSeedSC1',]
 
 #df_chain = load_data.load_chain(files, "selected", branches, suffix = "extra", other_tree_name = "extended", other_branch = branches_extra)
 df_chain = load_data.load_chain(files, "selected", branches)
+#print(type(df_chain))
 #df_extra = load_data.load_chain(files, "extended", branches_extra, suffix = "extra") # taking only X, Y, Z of first hit
 #df_chain = pd.concat([df_original.set_index('runNumber'), df_extra.set_index('runNumber')], axis=1, join = 'inner').reset_index()
 #df_chain = df_original
-print(df_chain.keys())
-print("entries = %d" % df_chain.shape[0])
+#print(df_chain.keys())
+#print("entries = %d" % df_chain.shape[0])
 
 #flat columns
-branches_split = ["timeSeedSC","timeSecondToSeedSC","chargeEle","etaSCEle", "phiSCEle","xSeedSC", "ySeedSC", "amplitudeSeedSC","energySeedSC", "energySecondToSeedSC", "amplitudeSecondToSeedSC","R9Ele","etaEle","noiseSeedSC"]
-for br in branches_split:
-    if br+"[1]" in df_chain:
-        df_chain[[br+'1', br+'2']] = df_chain[[br+'[0]',br+'[1]']]
-        df_chaih = df_chain.drop(columns=[br+'[0]',br+'[1]',br+'[2]'])
+#branches_split = ["timeSeedSC","timeSecondToSeedSC","chargeEle","etaSCEle", "phiSCEle","xSeedSC", "ySeedSC", "amplitudeSeedSC","energySeedSC", "energySecondToSeedSC", "amplitudeSecondToSeedSC","R9Ele","etaEle","noiseSeedSC"]
+#for br in branches_split:
+#    if br+"[1]" in df_chain:
+#        df_chain[[br+'1', br+'2']] = df_chain[[br+'[0]',br+'[1]']]
+#        df_chain = df_chain.drop(columns=[br+'[0]',br+'[1]',br+'[2]'])
 
-df_chain['deltaT_ee'] = df_chain['timeSeedSC1']-df_chain['timeSeedSC2']
+df_chain = df_chain.assign(deltaT_ee = df_chain['timeSeedSC1']-df_chain['timeSeedSC2'], deltaT_e1 = df_chain['timeSeedSC1']-df_chain['timeSecondToSeedSC1'])
 
-df_chain['deltaEta_ee'] = df_chain['etaSCEle1']-df_chain['etaSCEle1']
-df_chain['deltaPhi_ee'] = compute.delta_phi(df_chain['phiSCEle1'], df_chain['phiSCEle2'])
-df_chain['deltaT_e1'] = df_chain['timeSeedSC1']-df_chain['timeSecondToSeedSC1']
-
-df_chain['deltaA_e1'] = df_chain['amplitudeSeedSC1']-df_chain['amplitudeSecondToSeedSC1']
-df_chain['deltaA_e2'] = df_chain['amplitudeSeedSC2']-df_chain['amplitudeSecondToSeedSC2']
-
-
-df_chain['effA_ee'] = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],
-                                                        df_chain['noiseSeedSC1'],
-                                                        df_chain['amplitudeSeedSC2'],
-                                                        df_chain['noiseSeedSC2'])
-
-df_chain['effA_e1'] = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],
-                                                        df_chain['noiseSeedSC1'],
-                                                        df_chain['amplitudeSecondToSeedSC1'],
-                                                        df_chain['noiseSeedSC1'])
+print(df_chain.head())
+#df_chain['deltaT_ee'] = df_chain['timeSeedSC1']-df_chain['timeSeedSC2']
 #
-#df_chain['effA_e2'] = compute.effective_amplitude(df_chain['amplitudeSeedSC2'],
-#                                                        df_chain['noiseSeedSC2'],
-#                                                        df_chain['amplitudeSecondToSeedSC2'],
+#df_chain['deltaEta_ee'] = df_chain['etaSCEle1']-df_chain['etaSCEle1']
+#df_chain['deltaPhi_ee'] = compute.delta_phi(df_chain['phiSCEle1'], df_chain['phiSCEle2'])
+#df_chain['deltaT_e1'] = df_chain['timeSeedSC1']-df_chain['timeSecondToSeedSC1']
+#
+#df_chain['deltaA_e1'] = df_chain['amplitudeSeedSC1']-df_chain['amplitudeSecondToSeedSC1']
+#df_chain['deltaA_e2'] = df_chain['amplitudeSeedSC2']-df_chain['amplitudeSecondToSeedSC2']
+#
+#
+#df_chain['effA_ee'] = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],
+#                                                        df_chain['noiseSeedSC1'],
+#                                                        df_chain['amplitudeSeedSC2'],
 #                                                        df_chain['noiseSeedSC2'])
-
-df_chain['timeSeedSC1_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle1'], df_chain['timeSeedSC1'])
-df_chain['timeSeedSC2_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle2'], df_chain['timeSeedSC2'])
-df_chain['timeSecondToSeedSC1_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle1'], df_chain['timeSecondToSeedSC1'])
-df_chain['timeSecondToSeedSC2_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle2'], df_chain['timeSecondToSeedSC2'])
-
-df_chain['deltaT_ee_corr'] = df_chain['timeSeedSC1_corr']-df_chain['timeSeedSC2_corr']
-df_chain['deltaT_e1_corr'] = df_chain['timeSeedSC1_corr']-df_chain['timeSecondToSeedSC1_corr']
+#
+#df_chain['effA_e1'] = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],
+#                                                        df_chain['noiseSeedSC1'],
+#                                                        df_chain['amplitudeSecondToSeedSC1'],
+#                                                        df_chain['noiseSeedSC1'])
+##
+##df_chain['effA_e2'] = compute.effective_amplitude(df_chain['amplitudeSeedSC2'],
+##                                                        df_chain['noiseSeedSC2'],
+##                                                        df_chain['amplitudeSecondToSeedSC2'],
+##                                                        df_chain['noiseSeedSC2'])
+#
+#df_chain['timeSeedSC1_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle1'], df_chain['timeSeedSC1'])
+#df_chain['timeSeedSC2_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle2'], df_chain['timeSeedSC2'])
+#df_chain['timeSecondToSeedSC1_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle1'], df_chain['timeSecondToSeedSC1'])
+#df_chain['timeSecondToSeedSC2_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle2'], df_chain['timeSecondToSeedSC2'])
+#
+#df_chain['deltaT_ee_corr'] = df_chain['timeSeedSC1_corr']-df_chain['timeSeedSC2_corr']
+#df_chain['deltaT_e1_corr'] = df_chain['timeSeedSC1_corr']-df_chain['timeSecondToSeedSC1_corr']
 
 
 #df = get_ids.appendIdxs(df, "1")
@@ -169,10 +195,10 @@ if mapList:
         toPlot.append(mvary)    
         toPlot.append(mvarz)
 
-for var in toPlot:
-    if not var in df_chain:
-        print("### ERROR: missing variable: "+ var)
-        sys.exit()
+#for var in toPlot:
+#    if not var in df_chain:
+#        print("### ERROR: missing variable: "+ var)
+#        sys.exit()
 
 ### 1D histograms
 if hvarList:
@@ -180,7 +206,8 @@ if hvarList:
         h = obj.histo1d(hvar,config)
         for s in h.selections: 
             s_name = h.var+'_'+s.replace('-',"_")
-            df_this = select.apply_selection(df_chain, s)
+            df_this = select.apply_selection(df_chain[h.var], s).compute()
+            print(df_this)
             plot_root = plt_to_TH1(h.plot(df_this), s_name)
             plot_root.Write()
             plt.close()
@@ -189,6 +216,7 @@ if hvarList:
                 if plot_root: plot_root.Write()
             del df_this
             gc.collect()
+
 
 ### 2D histograms
 if hvar2DList:
@@ -208,8 +236,13 @@ if grList:
     for grvar in grList:
         gr = obj.graph(grvar, config)
         for s in gr.selections:
+            size = 0 
+            if (":") in s: 
+                s, size = s.split(":")
+                size = int(size)
             s_name = gr.name+'_'+s.replace('-',"_")
             df_this = select.apply_selection(df_chain, s)
+            if gr.varx == "runNumber" or gr.varx == "eventTime": df_this = df_this.sort_values(by=['eventTime']) 
             for opt in gr.options: 
                 if not "aggr" in opt: 
                     print("### WARNING only aggregate options are implemented for graphs, skipping ", opt)
@@ -217,8 +250,8 @@ if grList:
                 print(opt.split(":")[1:])
                 if len(opt.split(":")[1:]) > 1: print("### WARNING multiple aggregate variables not implemented, using ", opt.split(":")[1])
                 aggr_var = opt.split(":")[1]
-                print(df_this)
-                plot_root = plt_to_TGraph(gr.plot(df_this, aggr_var), aggr_var + "_" + s_name, gr.binning)
+
+                plot_root = plt_to_TGraph(gr.plot(df_this, aggr_var, args, size), aggr_var + "_" + s_name, gr.binning)
                 plot_root.Write()
                 plt.close()               
 
@@ -228,11 +261,11 @@ if grList:
 ### maps
 if mapList:
     for mvars in mapList:
-        map2d = obj.graph(grvar, config)
+        map2d = obj.map2d(mvars, config)
         for s in map2d.selections:
             s_name = map2d.name+'_'+s.replace('-',"_")
             df_this = select.apply_selection(df_chain, s)
-            for opt in gr.options: 
+            for opt in map2d.options: 
                 if not "aggr" in opt: 
                     print("### WARNING only aggregate options are implemented for maps, skipping ", opt)
                     continue
