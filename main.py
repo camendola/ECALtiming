@@ -16,7 +16,7 @@ import matplotlib.pyplot as plt
 import modules.classes as obj
 
 import pandas as pd
-
+import dask
 import gc
 import ROOT
 import datetime
@@ -52,7 +52,7 @@ if year ==2018:
 
 files = [line. rstrip('\n') for line in open(fileList)]
 files_extra = [line. rstrip('\n') for line in open(fileList_extra)]
-
+print (files)
 newfiles = []
 if args.era:
     for file in files:
@@ -212,19 +212,24 @@ if mapList:
 if hvarList:
     for hvar in hvarList:
         h = obj.histo1d(hvar,config)
+        results = []
+        s_names = []
         for s in h.selections: 
             s_name = h.var+'_'+s.replace('-',"_")
             df_this = select.apply_selection(df_chain, s)[h.var]
-            df_this = df_this.compute()
-            print(s, df_this.shape[0]) 
+            results.append(df_this)
+            s_names.append(s_name)
+        
+        results = dask.compute(*results)
+        for s_name, df_this in zip(s_names, results):
             plot_root = plt_to_TH1(h.plot(df_this), s_name)
             plot_root.Write()
             plt.close()
             if "outliers" in h.options: 
                 plot_root = plt_to_TH1(h.outlier_aware_hist(df_this), s_name+'_outliers')
                 if plot_root: plot_root.Write()
-            del df_this
-            gc.collect()
+        del results
+
 
 
 ### 2D histograms
