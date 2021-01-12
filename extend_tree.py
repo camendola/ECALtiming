@@ -41,8 +41,8 @@ print("@@@ Loading files...")
 file = args.file
 file_extra = args.extra
 if args.debug:
-    file = "/drf/projets/cms/ca262531/ecalelf/ntuples/13TeV/ALCARERECO/PromptReco2017_103X_EtaScaleupdatedSCregressionV3/DoubleEG-Run2017B-ZSkim-Prompt-v1/297046-297723/294927-306462_Prompt_v1/pedNoise/DoubleEG-Run2017B-ZSkim-Prompt-v1-297046-297723.root"
-    file_extra = "/drf/projets/cms/ca262531/ecalelf/ntuples/13TeV/ALCARERECO/PromptReco2017_103X_EtaScaleupdatedSCregressionV3/DoubleEG-Run2017B-ZSkim-Prompt-v1/297046-297723/294927-306462_Prompt_v1/pedNoise/extraCalibTree-DoubleEG-Run2017B-ZSkim-Prompt-v1-297046-297723.root"
+    file = "/afs/cern.ch/work/c/camendol/ecalelf/ntuples/13TeV/ALCARERECO/PromptReco2017_103X_EtaScaleupdatedSCregressionV3/DoubleEG-Run2017B-ZSkim-Prompt-v1/297046-297723/294927-306462_Prompt_v1/pedNoise/DoubleEG-Run2017B-ZSkim-Prompt-v1-297046-297723.root"
+    file_extra = "/afs/cern.ch/work/c/camendol/ecalelf/ntuples/13TeV/ALCARERECO/PromptReco2017_103X_EtaScaleupdatedSCregressionV3/DoubleEG-Run2017B-ZSkim-Prompt-v1/297046-297723/294927-306462_Prompt_v1/pedNoise/extraCalibTree-DoubleEG-Run2017B-ZSkim-Prompt-v1-297046-297723.root"
 
 if not os.path.isfile(file):
     print ("Could not find file:", file)
@@ -58,7 +58,8 @@ for br in branches_split:
         df[[br+'1', br+'2']] = df[[br+'[0]',br+'[1]']]
         branches_todrop.append(br+'1')
         branches_todrop.append(br+'2')
-        df = df.drop(columns = [br+'[0]',br+'[1]', br+'[2]'] )
+        df = df.drop(columns = [br+'[0]',br+'[1]', br+'[2]'])
+
 
 initial_size = df.shape[0]
 print(str(float(process.memory_info().rss)/1000000))  #
@@ -85,8 +86,9 @@ for df_extra_chunk in tqdm(uproot.pandas.iterate(file_extra, "extraCalibTree", b
 df_extra1 = pd.concat(extra1_chunk_list)
 df_extra2 = pd.concat(extra2_chunk_list)
 del extra1_chunk_list, extra2_chunk_list
-df = pd.concat([df, df_extra1, df_extra2], axis=1) 
+df = pd.concat([df, df_extra1, df_extra2], axis=1).dropna()
 del df_extra1, df_extra2
+
 gc.collect()
 df_extra1 = pd.DataFrame()
 df_extra2 = pd.DataFrame()
@@ -94,7 +96,7 @@ print(process.memory_info().rss)  #
 #-------------------
 print("@@@ Loading fill lumi table...")
 
-lumi_file = "/drf/projets/cms/ca262531/fill_lumi/lumi_Run1_Run2_unixTime.dat"
+lumi_file = "/afs/cern.ch/work/c/camendol/fill_lumi/lumi_Run1_Run2_unixTime.dat"
 df_lumi_chunks = pd.read_csv(lumi_file, sep='\s+', usecols = [0, 1, 3, 6], comment = '#', chunksize=5000)
 lumi_chunk_list = []
 for df_lumi_chunk in tqdm(df_lumi_chunks):
@@ -132,7 +134,7 @@ print("@@@ Loading IOVs: EcalPedestals (Run 2 UL)")
 era = file.split("Run"+str(args.year))[1][0]
 print(process.memory_info().rss)  #
 print("@@@ Run"+str(args.year)+str(era))
-dump_file = "/drf/projets/cms/ca262531/ECALconditions_dumps/EcalPedestalsRun"+str(args.year)+str(era)+".dat"
+dump_file = "/afs/cern.ch/work/c/camendol/ECALconditions_dumps/EcalPedestalsRun"+str(args.year)+str(era)+".dat"
 
 dump_chunk_list = []  # append each chunk df here 
 df_dump_chunks = pd.read_csv(dump_file, chunksize=10000, sep='\s+',  header=None, usecols = [4, 5, 7], names = ["noise","begin", "DetID"])

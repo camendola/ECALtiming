@@ -1,7 +1,7 @@
 import ROOT
 import argparse
 from ROOT import gPad
-
+import pandas as pd
 
 def Frame(gPad,width=2):
     gPad.Update()
@@ -47,6 +47,38 @@ def TextAuto(gPad, text, size = 0.05, font=42, align = 13, line = 1):
     latex.DrawLatex(x,y,text)
     return latex
 
+def GetNDC(x):
+  gPad.Update()
+  return (x - gPad.GetX1())/(gPad.GetX2()-gPad.GetX1())
+
+
+def DrawEras(gPad, year):
+    df_eras = pd.read_csv("eras.dat", usecols = [0,1], names=["eras","first"], header = None, delimiter="\t")
+    df_eras = df_eras[(df_eras["eras"].str.contains(year))]
+    print(df_eras)
+
+    tm = 1.-gPad.GetTopMargin();
+    bm = gPad.GetBottomMargin();
+    lines = []
+    labels = []
+    for index, row in df_eras.iterrows():
+        l = ROOT.TLine()
+        l.SetLineWidth(2)
+        l.SetLineColor(ROOT.kGray+2)
+        l.SetLineStyle(9)
+        print(row['eras'], row['first'])
+        l.DrawLineNDC(GetNDC(row['first']),bm,GetNDC(row['first']),tm);
+        lines.append(l)
+        latex = ROOT.TLatex()   
+        latex.SetNDC()
+        latex.SetTextAngle(90)
+        latex.SetTextAlign(11)
+        latex.SetTextColor(ROOT.kGray+2)
+        latex.SetTextSize(0.03)
+        latex.DrawLatex(GetNDC(row['first'])+0.02, 0.3*tm,row["eras"])
+        labels.append(latex)
+    return lines, labels
+
 
 parser = argparse.ArgumentParser(description='Command line parser of plotting options')
 
@@ -59,6 +91,8 @@ parser.add_argument('--norm', dest='norm', help='norm to 1', default=False, acti
 
 
 parser.add_argument('--logz', dest='logz', help='log z' , default=False, action='store_true')
+parser.add_argument('--show_eras', dest='show_eras', help='have markers indicating eras' , default=False, action='store_true')
+
 
 parser.add_argument('--zmin', dest='zmin',type = float, help='zmin', default=None)
 parser.add_argument('--zmax', dest='zmax',type = float, help='zmax', default=None)
@@ -79,7 +113,7 @@ sel_colors = [
     ]
 
 
-ROOT.gROOT.SetBatch(True)
+#ROOT.gROOT.SetBatch(True)
 
 tag = ""
 if args.tag: tag = "_"+args.tag
@@ -168,19 +202,39 @@ else:
         c.Update()
 
     elif isinstance(plot[0], ROOT.TGraph):
-        gr = plot[0]
+        
         c = ROOT.TCanvas("c","c",800, 600)
         c.SetLeftMargin(0.15)
-        gr.Draw("ap")
-        gr.SetTitle("")
-        gr.SetMarkerStyle(8)
-        gr.SetMarkerColor(ROOT.kBlue+1)
-        if args.xlabel: gr.GetXaxis().SetTitle(args.xlabel)
-        if args.ylabel: gr.GetYaxis().SetTitle(args.ylabel)
+        if len(selections) == 1:
+            gr = plot[0]
+            gr.Draw("ap")
+            gr.SetTitle("")
+            gr.SetMarkerStyle(8)
+            gr.SetMarkerColor(ROOT.kBlue+1)
+            if args.xlabel: gr.GetXaxis().SetTitle(args.xlabel)
+            if args.ylabel: gr.GetYaxis().SetTitle(args.ylabel)
+        else:
+            legend = ROOT.TLegend(0.65,0.7,0.89,0.89)
+            mg = ROOT.TMultiGraph()
+            for i, sel in enumerate(selections):
+                plot[i].SetMarkerStyle(8) 
+                plot[i].SetLineColor(sel_colors[i])
+                plot[i].SetMarkerColor(sel_colors[i])
+                mg.Add(plot[i])
+                legend.AddEntry(plot[i], leg_labels[i], "p")
 
+            legend.SetFillStyle(0)
+            legend.SetBorderSize(0)
+            legend.SetTextFont(43)
+            mg.Draw("ap")
+            if args.xlabel: mg.GetXaxis().SetTitle(args.xlabel)
+            if args.ylabel: mg.GetYaxis().SetTitle(args.ylabel)
+            legend.Draw("same")
         Frame(gPad) 
+        if args.show_eras: runlines, runlabels = DrawEras(gPad, args.year)
         yrlabel = TextAuto(gPad, args.year, align = 31)
         c.Update()
+        input()
 
     selname = ""
     for i in selections:

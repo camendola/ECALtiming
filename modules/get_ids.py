@@ -21,11 +21,13 @@ SubdetMask = 0x7;
 #BARREL
 #https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EBDetId.h
 def getEBDetId(ieta, iphi): 
-	id_det = (((3 & DetMask) << 28) | ((1 & SubdetMask) << 25)) 
-	id = ((np.where((ieta.values > 0),(0x10000 | (ieta.values << 9)), (-ieta.values) << 9)) | (iphi.values &  0x1FF))
-	id = twos_comp(id,17)
-	id = id_det | id 
-	return id
+    ieta = ieta.astype("int")
+    iphi = iphi.astype("int")
+    id_det = (((3 & DetMask) << 28) | ((1 & SubdetMask) << 25)) 
+    id = ((np.where((ieta.values > 0),(0x10000 | (ieta.values << 9)), (-ieta.values) << 9)) | (iphi.values &  0x1FF)).astype("int")
+    id = twos_comp(id,17).astype("int")
+    id = id_det | id 
+    return id
 
 def geticEB(ieta, iphi, positiveZ):
 	crystalsInPhi = 20 #per SM
@@ -93,9 +95,9 @@ np_QuadColLimits = np.asarray(QuadColLimits)
 
 #https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EEDetId.h
 def getEEDetId(ix, iy, positiveZ): 
-	id = (((3 & DetMask) << 28) | ((2 & SubdetMask) << 25)) 
-	id = id | (iy.values & 0x7f) | ((ix.values & 0x7f) << 7) | np.where(positiveZ, 0x4000, 0)
-	return id
+    id = (((3 & DetMask) << 28) | ((2 & SubdetMask) << 25))
+    id = id | (iy.values & 0x7f) | ((ix.values & 0x7f) << 7) | np.where(positiveZ, 0x4000, 0)
+    return id
 
 def iquadrant(ix, iy):
 	return np.where(ix.values > 50, np.where(iy.values > 50 , 1, 4), np.where(iy.values > 50 , 2, 3))
@@ -126,36 +128,38 @@ def getSC(ix, iy,isEB):
 
 
 def appendIdxs(df, pair_idx, seed = "Seed"):
-	ix = "x"+seed+"SC"+pair_idx
-	iy = "y"+seed+"SC"+pair_idx
-	iz = "z"+seed+"SC"+pair_idx
+    ix = "x"+seed+"SC"+pair_idx
+    iy = "y"+seed+"SC"+pair_idx
+    iz = "z"+seed+"SC"+pair_idx
+    
+    ieta = ix
+    iphi = iy
+    isEB = (df[iz] == 0)
 
-	ieta = ix
-	iphi = iy
-	isEB = (df[iz] == 0)
-
-
-	df["EcalDetID"+seed+"SC"+pair_idx] = np.where(isEB, getEBDetId(df[ieta], df[iphi]), getEEDetId(df[ix], df[iy], df[iz]))
-
-	#positiveZ()
-	#https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EBDetId.h#L76
-	#https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EEDetId.h#L174
+    df[ix] = df[ix].astype("int")
+    df[iy] = df[iy].astype("int")
+    df["EcalDetID"+seed+"SC"+pair_idx] = np.where(isEB, getEBDetId(df[ieta], df[iphi]), getEEDetId(df[ix], df[iy], df[iz]))
+    
+    #positiveZ()
+    #https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EBDetId.h#L76
+    #https://github.com/cms-sw/cmssw/blob/master/DataFormats/EcalDetId/interface/EEDetId.h#L174
+    
+    positiveZ_col = np.where(isEB, df["EcalDetID"+seed+"SC"+pair_idx].values & 0x10000, df["EcalDetID"+seed+"SC"+pair_idx].values & 0x4000).astype("int")
 	
-	positiveZ_col = np.where(isEB, df["EcalDetID"+seed+"SC"+pair_idx].values & 0x10000, df["EcalDetID"+seed+"SC"+pair_idx].values & 0x4000)
+    df["ic"+seed+"SC"+pair_idx]        = np.where(isEB, geticEB(df[ieta], df[iphi], positiveZ_col),        np.nan)
+    
+    df["sc"+seed+"SC"+pair_idx]        = np.where(isEB, getSM(df[iphi],positiveZ_col), getSC(df[ix],df[iy],isEB)) #SM for EB, SC for EE
 	
-	df["ic"+seed+"SC"+pair_idx]        = np.where(isEB, geticEB(df[ieta], df[iphi], positiveZ_col),        np.nan)
-	
-	df["sc"+seed+"SC"+pair_idx]        = np.where(isEB, getSM(df[iphi],positiveZ_col), getSC(df[ix],df[iy],isEB)) #SM for EB, SC for EE
-	
-	df["ietaphi"+seed+"SC"+pair_idx]   = np.where(isEB, numberByEtaPhiEB(df[ieta],df[iphi],positiveZ_col), np.nan)
-
-	# trigger towers
-	ietaAbsTT_col                      = np.where(isEB, ietaAbsTTEB(df[ieta]),                       np.nan)
-	ietaTT_col                         = np.where(isEB, ietaTTEB(ietaAbsTT_col , positiveZ_col),            np.nan)
-	iphiTT_col                         = np.where(isEB, iphiTTEB(df[iphi]),                          np.nan)
-
-	df["iTT"+seed+"SC"+pair_idx]           = np.where(isEB, iTTEB(ietaAbsTT_col,iphiTT_col, positiveZ_col),     np.nan)
-	df["VFE"+seed+"SC"+pair_idx]           = np.where(isEB, VFE_EB(df[ieta]),     np.nan)
-	df["TRT"+seed+"SC"+pair_idx]           = np.where(isEB, TRT(df["iTT"+seed+"SC"+pair_idx], isEB),     np.nan)
-
-	return df
+    df["ietaphi"+seed+"SC"+pair_idx]   = np.where(isEB, numberByEtaPhiEB(df[ieta],df[iphi],positiveZ_col), np.nan)
+    
+    # trigger towers
+    ietaAbsTT_col                      = np.where(isEB, ietaAbsTTEB(df[ieta]),                       np.nan)
+    ietaTT_col                         = np.where(isEB, ietaTTEB(ietaAbsTT_col , positiveZ_col),            np.nan)
+    iphiTT_col                         = np.where(isEB, iphiTTEB(df[iphi]),                          np.nan)
+    
+    df["iTT"+seed+"SC"+pair_idx]           = np.where(isEB, iTTEB(ietaAbsTT_col,iphiTT_col, positiveZ_col),     np.nan)
+    df["VFE"+seed+"SC"+pair_idx]           = np.where(isEB, VFE_EB(df[ieta]),     np.nan)
+    df["TRT"+seed+"SC"+pair_idx]           = np.where(isEB, TRT(df["iTT"+seed+"SC"+pair_idx], isEB),     np.nan)
+    
+    return df
+    

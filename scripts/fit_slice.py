@@ -83,7 +83,7 @@ args = parser.parse_args()
 
 inFile = ROOT.TFile.Open("plots/"+args.tag+"/outPlot_"+args.year+".root")
 
-name = "deltaT_vs_effA_e1_seeds"
+name = "deltaT_vs_effA_e1"
 N = 3.30413e+01
 C = 9.27409e-02
 if args.year == "2018":
@@ -182,15 +182,27 @@ Clabel = Text(gPad, 0.6, 0.65,"C = {:.3f} #pm {:.3f} ns".format(func.GetParamete
 
 c.Update()
 c.Modified()
+
 if args.show: input()
 
+
+hfit = TH1F("hfit","hfit", 4, 0, 4)
+hfit.SetBinContent(1, func.GetParameter(0))
+hfit.SetBinContent(2, func.GetParameter(1))
+hfit.SetBinContent(3, func.GetParError(0))
+hfit.SetBinContent(4, func.GetParError(1))
+hfit.GetXaxis().SetBinLabel(1, "N")
+hfit.GetXaxis().SetBinLabel(2, "C")
+hfit.GetXaxis().SetBinLabel(3, "N_error")
+hfit.GetXaxis().SetBinLabel(4, "C_error")
+
 if (args.effs):
-    ename = "effs_deltaT_e1_seeds_vs_effA_e1_seeds"
+    ename = "effs_deltaT_e1_vs_effA_e1"
     if args.glob: 
         ename = "effs_deltaT_ee_vs_effA_ee"
 
     eff_s_graph = inFile.Get(ename+"_"+args.sel)
-    
+
     eff_s_graph.SetMarkerStyle(8)
     c2 = ROOT.TCanvas("c2","c2",700,600)
     c2.SetLeftMargin(0.17)
@@ -209,20 +221,24 @@ if (args.effs):
     eff_s_graph.SetTitle("")
     Frame(gPad)
     yrlabel = TextAuto(gPad, args.year, align = 31)
+    func_effs = TF1("func_effs","sqrt(([0]/(x))^2 + 2*([1]^2))", x[0]-x_low[0], x[-1]+x_high[-1])
+
+    N = 48
+    C = 0.22
+    #if args.year == "2018":
+    #    N =  5.36645e+01
+    #    C =  1.89872e-01
+    func_effs.SetParameter(0, N)
+    func_effs.SetParameter(1, C)
+    
+    eff_s_graph.Fit("func_effs","R")
+    Nlabel = Text(gPad, 0.6, 0.7, "N = {:.3f} #pm {:.3f} ns".format(func_effs.GetParameter(0), func_effs.GetParError(0)))
+    Clabel = Text(gPad, 0.6, 0.65,"C = {:.3f} #pm {:.3f} ns".format(func_effs.GetParameter(1), func_effs.GetParError(1)))
 
     c2.Update()
     c2.Modified()
     if args.show: input()
 
-hfit = TH1F("hfit","hfit", 4, 0, 4)
-hfit.SetBinContent(1, func.GetParameter(0))
-hfit.SetBinContent(2, func.GetParameter(1))
-hfit.SetBinContent(3, func.GetParError(0))
-hfit.SetBinContent(4, func.GetParError(1))
-hfit.GetXaxis().SetBinLabel(1, "N")
-hfit.GetXaxis().SetBinLabel(2, "C")
-hfit.GetXaxis().SetBinLabel(3, "N_error")
-hfit.GetXaxis().SetBinLabel(4, "C_error")
 
 
 
@@ -235,3 +251,6 @@ if(args.effs): eff_s_graph.Write()
 
 c.SaveAs("plots/"+args.tag+"/"+args.year+"/sigma_"+name+"_"+args.sel+".png")
 c.SaveAs("plots/"+args.tag+"/"+args.year+"/sigma_"+name+"_"+args.sel+".pdf")
+if(args.effs):
+    c2.SaveAs("plots/"+args.tag+"/"+args.year+"/effs_sigma_"+name+"_"+args.sel+".png")
+    c2.SaveAs("plots/"+args.tag+"/"+args.year+"/effs_sigma_"+name+"_"+args.sel+".pdf")

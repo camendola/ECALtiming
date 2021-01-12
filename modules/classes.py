@@ -139,6 +139,8 @@ class graph:
 		binning = []
 		if self.var in config.config["grmarkerwidth"]:
                     cfg_binning = config.readOption("grmarkerwidth::"+self.var).split(",")
+                    print (cfg_binning)
+                    input()
                     if len(cfg_binning) == 3:
                         bins, xmin, xmax = cfg_binning
                         xmin = float(xmin.strip())
@@ -161,18 +163,6 @@ class graph:
 		if self.var in config.config['groptions']:
 			options = config.readOption("groptions::"+self.var).split(",")
 		return [opt.strip() for opt in options]
-	
-
-	def plot(self, df, aggr_var, args, size):
-		if args.byrun: 
-			return plot_byrun(df,aggr_var)
-		elif args.byrunsize:		
-			return plot_byrunsize(df,aggr_var,size)
-		elif args.bysize:		
-			return plot_bysize(df,aggr_var,size)
-		else: 
-			return plot_simple(df,aggr_var)
-	
 
 	def plot_simple(self, df, aggr_var):
 		if len(self.binning) > 0:
@@ -181,12 +171,23 @@ class graph:
 			graph = df.groupby(self.varx)[self.vary]
 		if hasattr(compute, aggr_var):
 			aggr_graph = graph.agg(getattr(compute, aggr_var))
+			print(aggr_graph)
 		elif hasattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var):
 			aggr_graph = getattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var)(graph)
 		else: 
 			print ("### WARNING: ", aggr_var, " not defined, skipping")
 		plot = aggr_graph.plot()
-		return plot
+		return plot	
+
+	def plot(self, df, aggr_var, args, size):
+		if args.byrun: 
+			return self.plot_byrun(df,aggr_var)
+		elif args.byrunsize:		
+			return self.plot_byrunsize(df,aggr_var,size)
+		elif args.bysize:		
+			return self.plot_bysize(df,aggr_var,size)
+		else: 
+			return self.plot_simple(df,aggr_var)
 	
 	def plot_byrun(self, df, aggr_var):
 		graph = df.groupby('runNumber')[self.vary]

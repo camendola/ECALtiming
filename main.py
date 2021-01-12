@@ -12,11 +12,13 @@ import seaborn as sns
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-
+import random, string
 import modules.classes as obj
 
 import pandas as pd
 import dask
+from dask import delayed
+import dask.dataframe as dd
 import gc
 import ROOT
 import datetime
@@ -36,6 +38,8 @@ parser.add_argument('--byrunsize', dest='byrunsize', help='split graphs by run a
 parser.add_argument('--bysize', dest='bysize', help='split graphs by size only', default=False, action ='store_true')
 parser.add_argument('-e', '--era', default = None, help="era")
 parser.add_argument('--debug', dest='debug', help='debug', default=False, action ='store_true')
+parser.add_argument('--graph', dest='graph', help='debug', default=False, action ='store_true')
+
 
 args = parser.parse_args()
 
@@ -46,7 +50,7 @@ if year ==2017:
     fileList = "filelists/ECALELF_Run2UL/Data_ALCARECO_UL2017.log"
     fileList_extra = "filelists/ECALELF_Run2UL/Data_ALCARECO_UL2017_extra.log"
 if year ==2018: 
-    fileList = "filelists/ECALELF_Run2UL_h5/Data_UL2018_106X_dataRun2_UL18.log"
+    fileList = "filelists/ECALELF_Run2UL_skimmed/Data_UL2018_106X_dataRun2_UL18.log"
     fileList_extra = "filelists/ECALELF_Run2UL/Data_UL2018_extra.log"
 
 
@@ -94,7 +98,15 @@ if args.bysize:    print("*** splitting graphs by number of events")
 #            'R9Ele', 
 #            'timeSeedSC','timeSecondToSeedSC','amplitudeSeedSC', 'amplitudeSecondToSeedSC',
 #            'energySeedSC', 'energySecondToSeedSC', 'noiseSeedSC',
-#            'invMass','ele1E', 'ele2E', 'eventTime']
+#            'invMass','ele1E', 'ele2E', 'eventTime', 'gainSeedSC']
+
+
+#branches = ['runNumber','etaSCEle','phiSCEle',
+#            'etaEle',
+#            'R9Ele', 
+#            'timeSeedSC','timeSecondToSeedSC','amplitudeSeedSC', 
+#            'energySeedSC', 'noiseSeedSC',
+#            'invMass','ele1E', 'ele2E', 'eventTime', 'gainSeedSC']
 
 #branches = ['runNumber','etaSCEle1','etaSCEle2', 'phiSCEle1','phiSCEle2', 
 #            'xSeedSC1','xSeedSC2','ySeedSC1','ySeedSC2', 'etaEle1','etaEle2','vtxZ',
@@ -103,14 +115,17 @@ if args.bysize:    print("*** splitting graphs by number of events")
 #            'energySeedSC1', 'energySeedSC2','energySecondToSeedSC1','energySecondToSeedSC2', 'noiseSeedSC1','noiseSeedSC2',
 #            'invMass','ele1E', 'ele2E', 'eventTime']
 
-branches = ['runNumber','etaSCEle1','etaSCEle2', 
-            'timeSeedSC1','timeSeedSC2', 'timeSecondToSeedSC1','timeSecondToSeedSC2',
-            'invMass', 'eventTime', "gainSeedSC1", "gainSeedSC2", "R9Ele1", "R9Ele2", "noiseSeedSC1", "noiseSeedSC2", "amplitudeSeedSC1", "amplitudeSeedSC2", "amplitudeSecondToSeedSC1"]
+#branches = ['runNumber','etaSCEle1','etaSCEle2', 
+#            'timeSeedSC1','timeSeedSC2', 'timeSecondToSeedSC1','timeSecondToSeedSC2',
+#            'invMass', 'eventTime', "gainSeedSC1", "gainSeedSC2", "R9Ele1", "R9Ele2", "noiseSeedSC1", "noiseSeedSC2", "amplitudeSeedSC1", "amplitudeSeedSC2", "amplitudeSecondToSeedSC1"]
 
 branches_extra = ['noiseSeedSC1_GT', 'noiseSeedSC2_GT', 'eventTime', 'noiseSecondToSeedSC1_GT','iTTSeedSC1', 'scSeedSC1','iTTSecondToSeedSC1', 'scSecondToSeedSC1',]
 
 #df_chain = load_data.load_chain(files, "selected", branches, suffix = "extra", other_tree_name = "extended", other_branch = branches_extra)
-df_chain = load_data.load_chain(files, "selected", branches)
+
+#df_chain = load_data.load_hdf_file(files[0], "selected", branches) if args.debug else load_data.load_hdf(files, "selected", branches)
+df_chain = load_data.load_chain(files, "selected") 
+
 #print(type(df_chain))
 #df_extra = load_data.load_chain(files, "extended", branches_extra, suffix = "extra") # taking only X, Y, Z of first hit
 #df_chain = pd.concat([df_original.set_index('runNumber'), df_extra.set_index('runNumber')], axis=1, join = 'inner').reset_index()
@@ -119,14 +134,24 @@ df_chain = load_data.load_chain(files, "selected", branches)
 #print("entries = %d" % df_chain.shape[0])
 
 #flat columns
-#branches_split = ["timeSeedSC","timeSecondToSeedSC","chargeEle","etaSCEle", "phiSCEle","xSeedSC", "ySeedSC", "amplitudeSeedSC","energySeedSC", "energySecondToSeedSC", "amplitudeSecondToSeedSC","R9Ele","etaEle","noiseSeedSC"]
+#branches_split = ["timeSeedSC","timeSecondToSeedSC","chargeEle","etaSCEle", "phiSCEle","xSeedSC", "ySeedSC", "amplitudeSeedSC","energySeedSC", "energySecondToSeedSC", "amplitudeSecondToSeedSC","R9Ele","etaEle","noiseSeedSC", "gainSeedSC"]
+#branches_split = ["timeSeedSC","chargeEle","etaSCEle", "phiSCEle","amplitudeSeedSC","energySeedSC","R9Ele","etaEle","noiseSeedSC", "gainSeedSC"]
+#print (df_chain.columns)
 #for br in branches_split:
-#    if br+"[1]" in df_chain:
-#        df_chain[[br+'1', br+'2']] = df_chain[[br+'[0]',br+'[1]']]
+#    if br+"[1]" in df_chain.columns.values:
+#        df_chain[[br+'1', br+'2']] = df_chain[[br+'[0]',br+'[1]']].drop(columns=[br+'[0]',br+'[1]',br+'[2]'])
 #        df_chain = df_chain.drop(columns=[br+'[0]',br+'[1]',br+'[2]'])
 
-df_chain = df_chain.assign(deltaT_ee = df_chain['timeSeedSC1']-df_chain['timeSeedSC2'], deltaT_e1 = df_chain['timeSeedSC1']-df_chain['timeSecondToSeedSC1'], effA_ee = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],df_chain['noiseSeedSC1'], df_chain['amplitudeSeedSC2'], df_chain['noiseSeedSC2']), effA_e1 = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],df_chain['noiseSeedSC1'],df_chain['amplitudeSecondToSeedSC1'],df_chain['noiseSeedSC1']))
+#df_chain = df_chain.assign(deltaT_ee = df_chain['timeSeedSC1']-df_chain['timeSeedSC2'], deltaT_e1 = df_chain['timeSeedSC1']-df_chain['timeSecondToSeedSC1'], effA_ee = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],df_chain['noiseSeedSC1'], df_chain['amplitudeSeedSC2'], df_chain['noiseSeedSC2']), effA_e1 = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],df_chain['noiseSeedSC1'],df_chain['amplitudeSecondToSeedSC1'],df_chain['noiseSeedSC1']))
 
+df_chain = df_chain.assign(deltaT_ee = df_chain['timeSeedSC1']-df_chain['timeSeedSC2'],effA_ee = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],df_chain['noiseSeedSC1'], df_chain['amplitudeSeedSC2'], df_chain['noiseSeedSC2']))
+
+
+#def assign(df):
+#    df = df.assign(deltaT_ee = df['timeSeedSC1']-df['timeSeedSC2'], deltaT_e1 = df['timeSeedSC1']-df['timeSecondToSeedSC1'], effA_ee = compute.effective_amplitude(df['amplitudeSeedSC1'],df['noiseSeedSC1'], df['amplitudeSeedSC2'], df['noiseSeedSC2']), effA_e1 = compute.effective_amplitude(df['amplitudeSeedSC1'],df['noiseSeedSC1'],df['amplitudeSecondToSeedSC1'],df['noiseSeedSC1']))
+#    return df
+
+#df_chain = assign(df_chain)
 
 #df_chain['deltaT_ee'] = df_chain['timeSeedSC1']-df_chain['timeSeedSC2']
 #
@@ -203,10 +228,11 @@ if mapList:
         toPlot.append(mvary)    
         toPlot.append(mvarz)
 
-#for var in toPlot:
-#    if not var in df_chain:
-#        print("### ERROR: missing variable: "+ var)
-#        sys.exit()
+for var in toPlot:
+    if not var in df_chain:
+        print("### ERROR: missing variable: "+ var)
+        sys.exit()
+
 
 ### 1D histograms
 if hvarList:
@@ -216,35 +242,36 @@ if hvarList:
         s_names = []
         for s in h.selections: 
             s_name = h.var+'_'+s.replace('-',"_")
+            print ("selecting")
             df_this = select.apply_selection(df_chain, s)[h.var]
-            results.append(df_this)
-            s_names.append(s_name)
-        
-        results = dask.compute(*results)
-        for s_name, df_this in zip(s_names, results):
+            print("selected")
+            rand_dir = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
+            pd.to_parquet(df_this.to_frame(), rand_dir)
+            df_this = pd.read_hdf(rand_dir)
+            print(df_this)
             plot_root = plt_to_TH1(h.plot(df_this), s_name)
             plot_root.Write()
             plt.close()
             if "outliers" in h.options: 
                 plot_root = plt_to_TH1(h.outlier_aware_hist(df_this), s_name+'_outliers')
                 if plot_root: plot_root.Write()
-        del results
-
-
-
+        del df_this
+        
 ### 2D histograms
 if hvar2DList:
     for hvars in hvar2DList:
         h = obj.histo2d(hvars, config)
+        results = []
+        s_names = []
+        print (h.selections)
         for s in h.selections:
             s_name = h.name+'_'+s.replace('-',"_")
-            df_this = select.apply_selection(df_chain, s)
-            df_this = df_this.compute()
+            df_this = select.apply_selection(df_chain, s)[[h.varx, h.vary]]
+            s_names.append(s_name)
             plot_root = plt_to_TH2(h.plot(df_this), s_name)
             plot_root.Write()
             plt.close()
-            del df_this
-            gc.collect()
+        del df_this
 
 ### graphs
 if grList:
@@ -257,7 +284,6 @@ if grList:
                 size = int(size)
             s_name = gr.name+'_'+s.replace('-',"_")
             df_this = select.apply_selection(df_chain, s)
-            df_this = df_this.compute()
             if gr.varx == "runNumber" or gr.varx == "eventTime": df_this = df_this.sort_values(by=['eventTime']) 
             for opt in gr.options: 
                 if not "aggr" in opt: 

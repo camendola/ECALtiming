@@ -4,14 +4,51 @@ import datetime
 import gc
 from root_pandas import read_root
 
+import dask
 import dask.dataframe as dd
 
+from tqdm import tqdm
+
+import ROOT
+
+def load_read_root(ntuple, tree_name, branch):
+    print("@ processing file " + ntuple)
+    with uproot.open(ntuple) as file:
+        tree = file[tree_name]
+        events = tree.numentries
+    dfs=[]
+    with tqdm(total=events, unit='entries') as pbar:    
+        for df in read_root(ntuple, tree_name, columns = branch, chunksize=100000):
+            #print(df)
+            array_columns = []
+            for n in range(df.shape[1]):
+                if df.dtypes[n] == object:
+                    if df.infer_objects().dtypes[n] == object:
+                        array_columns.append(df.columns[n])
+    
+                if df.dtypes[n] == bool:
+                    df[df.columns[n]] = pd.Series(df[df.columns[n]].astype(int), index=df.index)
+            
+            for n in array_columns:
+                if df[n].str.len().iloc[0] == 2:
+                    df[[n+'1', n+'2']] = pd.DataFrame(df[n].tolist(), index=df.index)
+                if df[n].str.len().iloc[0] == 3:
+                    df[[n+'1', n+'2', n+'3']] = pd.DataFrame(df[n].tolist(), index=df.index)
+                    df = df.drop(columns=n+'3')
+                    df = df.drop(columns=n)
+            dfs.append(df)
+            assert(not df.empty)
+            pbar.update(df.shape[0])
+    df = pd.concat(dfs)         
+    del dfs
+    return df
 
 def load_chain(ntuples, tree_name, branch = None, suffix = None, other_tree_name = None, other_branch = None):
     df_list = []
     for block in ntuples:
-        #df_b = load_file(block, tree_name, branch)
-        df_b = load_hdf_file(block, tree_name, branch)
+        print (block)
+        df_b = load_read_root(block, tree_name, branch)
+        #df_b = load_hdf_file(block, tree_name, branch)
         #df_b = load_file(block, tree_name, branch)
         if suffix: 
             block = block.replace(".root", "_"+suffix+".root")
@@ -36,22 +73,28 @@ def load_chain(ntuples, tree_name, branch = None, suffix = None, other_tree_name
         df_list.append(df_b)
         print (datetime.datetime.utcnow())
     print ('@@ Merging...')
-    #df = pd.concat(df_list, ignore_index=True)
-    df = dd.concat(df_list)
+    df = pd.concat(df_list, ignore_index=True)
+    #df = dd.concat(df_list)
     del df_list
     print ('@@ Merged ', datetime.datetime.utcnow())
     return df
 
 def load_file(ntuple, tree_name, branch):
     print ('@ Loading file: ',ntuple)
-    #file_content = uproot.open(ntuple)
-    file_content = uproot.daskframe(ntuple, tree_name)
+    file_content = uproot.open(ntuple)
+    #file_content = uproot.daskframe(ntuple, tree_name)
     print(file_content)
-    #tree = file_content[tree_name]
-    #df_b = tree.pandas.df(branch, flatten = False)
+    tree = file_content[tree_name]
+    df_b = tree.pandas.df(branch, flatten = False)
     del file_content
     return df_b
 
+
+def load_hdf(ntuples_list, tree_name, branch, chunksize = None):
+    df = dd.read_hdf(ntuples_list, key = tree_name, columns = branch)
+    return df
+
+@dask.delayed
 def load_hdf_file(ntuple, tree_name, branch, chunksize = None):
     print ('@ Loading file: ',ntuple)
     df_b = dd.read_hdf(ntuple, key = tree_name, columns = branch)
