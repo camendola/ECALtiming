@@ -16,24 +16,6 @@ using namespace recal;
 using namespace std;
 
 
-tuple <float, float, float> getICs(ICManager iovcalib, ICManager iovlaser, int x, int y, int run, int time, string whichlaser){
-  float calib         = iovcalib.getIC(x, y, 0, run);                     // physics calibration
-  float calib_first   = iovcalib.getIC(x, y, 0, 315252);                   // physics calibration first 2018A run
-  float laser_raw     = iovlaser.getIC(x, y, 0, time);                  // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
-  
-  // 40 mins = 2400 timestamp epochs => get back of about 39 mins to be sure to catch the previous iov 
-  int steps_back = 0;
-  while (laser_raw == 1. && time > 1524931327 && steps_back < 5){
-    time = time - 2350 ;
-    laser_raw     = iovlaser.getIC(x, y, 0, time);
-    steps_back += 1;
-  }  
-  float laser         = calib_first - laser_raw;
-  
-  return make_tuple(calib, laser_raw,  laser);
-}
-
-
 int main(int argc, char* argv[])
 {
         cxxopts::Options options("./bin/recalelf.exe", "rECAL timing with laser calibration");
@@ -61,7 +43,9 @@ int main(int argc, char* argv[])
 	string laser  = opts["laser"].as<string>();
 
 	string path_calib = "/afs/cern.ch/work/c/camendol/CalibIOVs/ic-config.json"; 
+	//string path_calib = "/afs/cern.ch/work/c/camendol/CalibIOVs/dummy.json"; 
 	string path_laser = "/afs/cern.ch/work/c/camendol/LaserIOVs/"+year+"/"+era+"/ic-config"+laser+".json"; 
+	//string path_laser = "/afs/cern.ch/work/c/camendol/LaserIOVs/"+year+"/A/dummy.json"; 
 	string input_file = opts["input"].as<string>();
 	string output_file = opts["output"].as<string>();
 	cout << "Input file "+input_file << endl; 
@@ -135,6 +119,9 @@ int main(int argc, char* argv[])
 	  {
 	    if (ev % 10000 == 0)  cout << "- reading event " << ev << " of " << entries << endl ;
 	    main_tree->GetEntry(ev);
+	    float calib1_first = 0;
+	    float calib2_first = 0;
+
 	    //clear variables
 	    calib1 = -999.;
 	    calib2 = -999.;
@@ -147,19 +134,36 @@ int main(int argc, char* argv[])
 	    timeSeedSC1_recal  = -999.;
 	    timeSeedSC2_recal  = -999.;
 
-	    tie(calib1, laser1_raw, laser1) = getICs(iovcalib, iovlaser,
-						     xSeedSC[0], 
-						     ySeedSC[0],  
-						     runNumber, 
-						     eventTime, 
-						     laser); 
-	    tie(calib2, laser2_raw, laser2) = getICs(iovcalib, iovlaser,
-	    					     xSeedSC[1], 
-	    					     ySeedSC[1], 
-	    					     runNumber, 
-	    					     eventTime, 
-	    					     laser);
-	    
+	    calib1         = iovcalib.getIC(xSeedSC[0], ySeedSC[0], 0, runNumber);                     // physics calibration
+	    calib1_first   = iovcalib.getIC(xSeedSC[0], ySeedSC[0], 0, 315252);                        // physics calibration first 2018A run
+	    laser1_raw     = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, eventTime);                     // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
+
+	    // 40 mins = 2400 timestamp epochs => get back of about 39 mins to be sure to catch the previous iov 
+	    int steps_back = 0;
+	    unsigned int time = eventTime;
+	    while (laser1_raw == 1. && time > 1524931327 && steps_back < 5){
+	      time = time - 2350 ;
+	      laser1_raw     = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, time);
+
+	      steps_back += 1;
+	    }  
+	    laser1         = calib1_first - laser1_raw;
+
+
+	    calib2         = iovcalib.getIC(xSeedSC[1], ySeedSC[1], 0, runNumber);                     // physics calibration
+	    calib2_first   = iovcalib.getIC(xSeedSC[1], ySeedSC[1], 0, 315252);                        // physics calibration first 2018A run
+	    laser2_raw     = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, eventTime);                     // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
+
+	    // 40 mins = 2400 timestamp epochs => get back of about 39 mins to be sure to catch the previous iov 
+	    steps_back = 0;
+	    time = eventTime;
+	    while (laser2_raw == 1. && time > 1524931327 && steps_back < 5){
+	      time = time - 2350 ;
+	      laser2_raw     = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, time);
+	      steps_back += 1;
+	    }  
+	    laser2       = calib2_first - laser2_raw;
+
 	    timeSeedSC1_recal  = timeSeedSC[0] - calib1 + laser1;	    
 	    timeSeedSC2_recal  = timeSeedSC[1] - calib2 + laser2;
 
