@@ -43,12 +43,13 @@ int main (int argc, char ** argv)
         cxxopts::Options options("a.out", "ECAL timing analysis");
 
         options.add_options()
-                ("d,debug", "enable debugging printouts", cxxopts::value<bool>()->default_value("false"))
-                ("y,year",  "years to process (comma separated list)",           cxxopts::value<vector<int> >())
-                ("i,input", "input files to process",     cxxopts::value<vector<string> >())
-                ("m,minimal", "the input tree contains only the minimal variables for the analysis", cxxopts::value<bool>()->default_value("false"))
-                ("r,runlist", "runs to process (comma separated list)", cxxopts::value<vector<unsigned int> >())
-                ("s,snapshot", "save a snapshot tree after common selections, containing the minimal variables needed in the analysis, and exit", cxxopts::value<bool>()->default_value("false"))
+                ("d,debug", "enable debugging printouts",                        cxxopts::value<bool>()->default_value("false"))
+                ("y,year",  "years to process (comma separated list)",           cxxopts::value<int>())
+                ("i,input", "input files to process",                            cxxopts::value<vector<string> >())
+                ("o,output", "output snapshot",                                  cxxopts::value<vector<string> >())
+                ("r,runlist", "runs to process (comma separated list)",          cxxopts::value<vector<unsigned int> >())
+                ("s,snapshot", "save a snapshot tree",                           cxxopts::value<bool>()->default_value("true"))
+                ("m,multithread", "parallel threads",                            cxxopts::value<bool>()->default_value("false"))
                 ("h,help",  "print this usage and exit")
                 ;
 
@@ -62,53 +63,53 @@ int main (int argc, char ** argv)
         // debug might also be declared global if needed in some external functions
         // and initialized here
         bool debug = opts["debug"].as<bool>();
-
-        bool minimal = opts["minimal"].as<bool>();
         bool snapshot = opts["snapshot"].as<bool>();
 
         // retrieving input files either from the specified year(s) or
         // from a provided comma-separated list of input file names
         vector<int> year;
         vector<string> input_files;
+        vector<string> output_files;
 	string filelist = "";
 	if (opts.count("year")) {
-                year = opts["year"].as<vector<int>>();
-                for (auto y : year) {
-		          if (y == 2016) {
-			    filelist = "filelists/ECALELF_Run2UL/Data_UL2016.log";
-			  } else if (y == 2017) {
-			    filelist = "filelists/ECALELF_Run2UL/Data_ALCARECO_UL2017.log";
-			  } else if (y == 2018) {
-			    filelist = "filelists/ECALELF_Run2UL/Data_UL2018_106X_dataRun2_UL18.log";
-			  }
-			  auto v = retrieve_files(filelist);
-			  input_files.insert(input_files.end(), v.begin(), v.end());
-                }
-        } else if (opts.count("input")) {
-                input_files = opts["input"].as<vector<string>>();
+                int y = opts["year"].as<int>();
+		if (y == 2016) {
+		  filelist = "filelists/ECALELF_Run2UL/Data_UL2016.log";
+		} else if (y == 2017) {
+		  filelist = "filelists/ECALELF_Run2UL/Data_ALCARECO_UL2017.log";
+		} else if (y == 2018) {
+		  filelist = "filelists/ECALELF_Run2UL/Data_UL2018_106X_dataRun2_UL18.log";
+		}
+		auto v = retrieve_files(filelist);
+		input_files.insert(input_files.end(), v.begin(), v.end());
+		
+        } else if (opts.count("input") && opts.count("output")) {
+                input_files  = opts["input"].as<vector<string>>();
+		output_files = opts["output"].as<vector<string>>();
+		
         } else {
-                cerr << "error: please specify one option between `year' and `input'\n";
+                cerr << "error: please specify one option between `year' and `input'/`output' \n";
                 cout << options.help() << endl;
                 exit(1); 
         }
 
         cout << "Going to skim the following files:\n";
 	for (auto & s : input_files)  cout << s << "\n";
-
+	
         for (auto & s : input_files) 
 	  {
 	    cout << "@@@ Skimming:\n";
 	    cout << s << "\n";
 
-	    ROOT::EnableImplicitMT();
+	    if (opts["debug"].as<bool>()) ROOT::EnableImplicitMT();
 	    ROOT::RDataFrame df("selected", s);
 
 	    // selections
 
 	    // geometry
 	    auto clean_ee      = "abs(deltaT_ee) < 5";
-	    auto clean_e_0     = "abs(deltaT_e1) < 5";
-	    
+	    auto clean_e_0     = "abs(deltaT_e) < 5";
+   
 	    // detector
 	    auto no_saturation = "gainSeedSC[0] == 0 && gainSeedSC[1] == 0";
 	    
@@ -120,59 +121,69 @@ int main (int argc, char ** argv)
 	    if(debug) for (auto & el : df.GetColumnNames()) cout << el << "\n";
 	    
 	    // new quantities
-	    ROOT::RDF::RNode fn = df, comm = df;
-	    if (!minimal) {
-	      fn = df.Define("deltaT_ee", "timeSeedSC[0] - timeSeedSC[1]")
-		.Define("delta_eta_ee", "etaSCEle[0] - etaSCEle[1]")
-		.Define("delta_phi_ee", "ROOT::VecOps::DeltaPhi(phiSCEle[0], phiSCEle[1])")
-		.Define("timeSeedSC1", "timeSeedSC[0]")
-		.Define("timeSeedSC2", "timeSeedSC[1]")
-		.Define("delta_t_e0", "timeSeedSC[0] - timeSecondToSeedSC[0]")
-		.Define("delta_t_e1", "timeSeedSC[1] - timeSecondToSeedSC[1]")
-		.Define("delta_a_e0", "amplitudeSeedSC[0] - amplitudeSecondToSeedSC[0]")
-		.Define("delta_a_e1", "amplitudeSeedSC[1] - amplitudeSecondToSeedSC[1]")
-		.Define("Aeff_e0", "amplitudeSeedSC[0] / noiseSeedSC[0]")
-		.Define("Aeff_e1", "amplitudeSeedSC[1] / noiseSeedSC[1]")
-		.Define("Aeff_ee", "Aeff_e0 * Aeff_e1 / sqrt(Aeff_e0 * Aeff_e0 + Aeff_e1 * Aeff_e1)")
-		.Define("timeSeedSC_corr", time_correction_vtx, {"vtxZ", "etaSCEle", "timeSeedSC"})
-		.Define("timeSeedSC1_corr", "timeSeedSC[0]")
-		.Define("timeSeedSC2_corr", "timeSeedSC[1]")
-		.Define("deltaT_ee_corr", "timeSeedSC_corr[0] - timeSeedSC_corr[1]")
-		.Define("deltaT_ee_recal", "timeSeedSC1_recal - timeSeedSC2_recal")
-		.Define("t_second_to_seed_corr", time_correction_vtx, {"vtxZ", "etaSCEle", "timeSecondToSeedSC"})
-		.Define("timeSecondToSeedSC1", "t_second_to_seed_corr[0]")
-		.Define("timeSecondToSeedSC2", "t_second_to_seed_corr[1]")
-		.Define("deltaT_e1_corr", "(t_seed_corr - t_second_to_seed_corr)[0]")
-		.Define("deltaT_e2_corr", "(t_seed_corr - t_second_to_seed_corr)[1]")
-		.Define("year", "runNumber >= 273158 && runNumber <= 284044 ? 2016 :"
-			"runNumber >= 297050 && runNumber <= 306460 ? 2017 :"
-			"runNumber >= 315257 && runNumber <= 325172 ? 2018 : 0");
+	    //ROOT::RDF::RNode fn = df, comm = df;
+	    ROOT::RDF::RNode fn = df;
+	    
+	    fn = df.Define("deltaT_ee", "timeSeedSC[0] - timeSeedSC[1]")
+	      .Define("deltaT_e", "timeSeedSC - timeSecondToSeedSC")
+	      .Define("A_e1", "amplitudeSeedSC[0] / noiseSeedSC[0]")
+	      .Define("A_e2", "amplitudeSeedSC[1] / noiseSeedSC[1]")
+	      .Define("effA_ee", "A_e1 * A_e2 / sqrt(A_e1 * A_e1 + A_e2 * A_e2)")
+	      .Define("timeSeedSC_corr", time_correction_vtx, {"vtxZ", "etaSCEle", "timeSeedSC"})
+	      .Define("deltaT_ee_corr", "timeSeedSC_corr[0] - timeSeedSC_corr[1]")
+	      .Define("timeSecondToSeedSC_corr", time_correction_vtx, {"vtxZ", "etaSCEle", "timeSecondToSeedSC"})
+	      .Define("deltaT_e_corr", "(timeSeedSC_corr - timeSecondToSeedSC_corr)")
+	      .Define("year", "runNumber >= 273158 && runNumber <= 284044 ? 2016 :"
+		      "runNumber >= 297050 && runNumber <= 306460 ? 2017 :"
+		      "runNumber >= 315257 && runNumber <= 325172 ? 2018 : 0");
 	      
-	      // reasonable quality selections and no gain switch
-	      comm = fn.Filter(z_mass, "Z mass").Filter(high_r9, "high R9").Filter(no_saturation, "no sat.");
-	    }
+	    // reasonable quality selections and no gain switch
+	    fn = fn.Filter(z_mass, "Z mass").Filter(high_r9, "high R9").Filter(no_saturation, "no sat.");
+	    
 	    
 	    // save a snapshot of the variables used in the analysis
 	    // for faster reload
 	    if (snapshot) {
 	      cout << "~~~> Going to snapshot...\n";
-	      string dest = "/afs/cern.ch/work/c/camendol/ECALtimingData/";
-	      string dest_dir = "";
-	      string file_out = "";
-	      size_t pos = filelist.find_last_of("/");
-	      if (pos != string::npos)	dest_dir = filelist.substr(pos+1);
-	      size_t pos_ext = dest_dir.find_last_of(".");
-	      if (pos_ext != string::npos)   dest_dir = dest_dir.substr(0, pos_ext);
-	      size_t pos_file = s.find_last_of("/");
-	      if (pos_file != string::npos)  file_out = s.substr(pos_file+1);
+	      string output = "";
+	      string path = ""; 
+	      if (opts.count("year")){
+		string dest = "/afs/cern.ch/work/c/camendol/ECALtimingData/";
+		string dest_dir = "";
+		string file_out = "";
+		size_t pos = filelist.find_last_of("/");
+		if (pos != string::npos)	dest_dir = filelist.substr(pos+1);
+		size_t pos_ext = dest_dir.find_last_of(".");
+		if (pos_ext != string::npos)   dest_dir = dest_dir.substr(0, pos_ext);
+		size_t pos_file = s.find_last_of("/");
+		if (pos_file != string::npos)  file_out = s.substr(pos_file+1);
+	    
+		path = dest+dest_dir+"_skimmed";
+		cout << dest+dest_dir+"_skimmed/snapshot_"+file_out<< endl;
+		output = path+"/snapshot_"+file_out;
+	    
+	      } else {
+		output = output_files[(&s - &input_files[0])];
+		cout << output << endl;
+		size_t pos = output.find_last_of("/");
+		if (pos != string::npos)        path = output.substr(pos+1);	
+	      }
 	      
-	      string path(dest+dest_dir+"_skimmed");
-	      cout << dest_dir+"_skimmed/snapshot_"+file_out<< endl;
+	      cout << "~~~> filesystem create dir...\n";
 	      boost::filesystem::create_directory(path);
-	      auto sn = comm.Snapshot("selected",path+"/snapshot_"+file_out, {"runNumber", "eventNumber", "eventTime", "year",
-		    "etaSCEle", "phiSCEle","calib", "laser", "amplitudeSeedSC",
-		    "deltaT_ee_recal","timeSeedSC1_recal", "timeSeedSC2_recal", 
-		    "Aeff_ee", "timeSeedSC1_corr", "timeSeedSC2_corr", "deltaT_e1_corr","deltaT_e2_corr","deltaT_ee_corr", "ySeedSC", "xSeedSC", "noiseSeedSC"});
+	      cout << "~~~> snapshot...\n";
+	      auto sn = fn.Snapshot("selected",output, 
+				      {
+					//event
+					"runNumber", "eventNumber", "eventTime", "year",
+					  //position
+					  "etaSCEle", "phiSCEle", "ySeedSC", "xSeedSC", 
+					  //seed 
+					  "amplitudeSeedSC", "timeSeedSC", "timeSeedSC_corr", "deltaT_ee", "deltaT_ee_corr", "effA_ee", 
+					  //second to seed
+					  "amplitudeSecondToSeedSC", "timeSecondToSeedSC", "timeSecondToSeedSC_corr", "deltaT_e", "deltaT_e_corr", "deltaT_e"
+					  }
+				      );
 	      cout << "...done\n";
 	      
 	    }
