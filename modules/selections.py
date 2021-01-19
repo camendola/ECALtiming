@@ -34,6 +34,11 @@ def BB(df):
 	mask = ((abs(df.etaSCEle1) < EBthreshold) & (abs(df.etaSCEle2) < EBthreshold))
 	return df[mask]
 
+def BBl(df):
+        # exclude events with laser calibration == 1
+	mask = ((abs(df.etaSCEle1) < EBthreshold) & (abs(df.etaSCEle2) < EBthreshold) & (df.timeSeedSC1_recal != 0) & (df.timeSeedSC2_recal != 0))
+	return df[mask]
+
 def E1(df):
 	mask = abs(df.etaSCEle1) > EBthreshold
 	return df[mask]
@@ -83,6 +88,7 @@ def Early2018(df):
 def Late2018(df): 
 	mask = (df.runNumber > 320000)
 	return df[mask]
+
 	
 #physics
 def isOS(df):
@@ -113,8 +119,8 @@ def Run1Sel_e1(df):
 def Run1Sel_ee(df):
         mask = (((df.amplitudeSeedSC1 * np.where(abs(df.etaSCEle1) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) < 120)
                 & ((df.amplitudeSeedSC2 * np.where(abs(df.etaSCEle2) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) < 120)
-                & (abs(df.timeSeedSC1 - df.timeSeedSC2) < 5)
-                & (df.invMass > 60) & (df.invMass < 150))
+                & (abs(df.timeSeedSC1 - df.timeSeedSC2) < 5))
+                #& (df.invMass > 60) & (df.invMass < 150))
        
         #mask =  ((df.invMass > 60) & (df.invMass < 150)
         #        & (abs(df.timeSeedSC1 - df.timeSeedSC2) < 5))

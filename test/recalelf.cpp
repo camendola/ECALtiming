@@ -96,16 +96,16 @@ int main(int argc, char* argv[])
 	Float_t timeSeedSC1_recal  = -999.;
 	Float_t timeSeedSC2_recal  = -999.;
 
-	recal_tree->Branch("calib1", &calib1, "calib1/f");
-	recal_tree->Branch("calib2", &calib2, "calib2/f");
+	recal_tree->Branch("calib1", &calib1, "calib1/F");
+	recal_tree->Branch("calib2", &calib2, "calib2/F");
 
-	recal_tree->Branch("laser1", &laser1, "laser1/f");
-	recal_tree->Branch("laser2", &laser2, "laser2/f");
-	recal_tree->Branch("laser1_raw", &laser1_raw, "laser1_raw/f");
-	recal_tree->Branch("laser2_raw", &laser2_raw, "laser2_raw/f");
+	recal_tree->Branch("laser1", &laser1, "laser1/F");
+	recal_tree->Branch("laser2", &laser2, "laser2/F");
+	recal_tree->Branch("laser1_raw", &laser1_raw, "laser1_raw/F");
+	recal_tree->Branch("laser2_raw", &laser2_raw, "laser2_raw/F");
 	
-	recal_tree->Branch("timeSeedSC1_recal", &timeSeedSC1_recal, "timeSeedSC1_recal/f");
-	recal_tree->Branch("timeSeedSC2_recal", &timeSeedSC2_recal, "timeSeedSC2_recal/f");
+	recal_tree->Branch("timeSeedSC1_recal", &timeSeedSC1_recal, "timeSeedSC1_recal/F");
+	recal_tree->Branch("timeSeedSC2_recal", &timeSeedSC2_recal, "timeSeedSC2_recal/F");
 	  
 
 	for (int ev = 0 ; ev < entries; ++ev) 

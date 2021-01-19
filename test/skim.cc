@@ -1,7 +1,7 @@
 // C++ version of the python analysis
 // - hopefully to fix memory issues
 // compile as a usual root code, e.g.
-// g++ test/skim.cc -O3 -std=c++14 `root-config --libs --cflags` -lboost_filesystem -lboost_system -o test/skim.exe
+// g++ test/skim.cc -O3 -std=c++14 `root-config --libs --cflags` -lboost_filesystem -lboost_system -o bin/skim.exe
 
 #include "ROOT/RDataFrame.hxx"
 #include "ROOT/RResultPtr.hxx"
@@ -26,6 +26,9 @@ ROOT::RVec<float> time_correction_vtx(float z, RVec_f eta, RVec_f t)
         t_corr = t - (sqrt(l * l + z * z - 2 * z * l * tanh(eta)) - l) * 0.0299792458;
         return t_corr;
 }
+
+
+
 
 
 vector<string> retrieve_files(string filelist)
@@ -126,13 +129,21 @@ int main (int argc, char ** argv)
 	    
 	    fn = df.Define("deltaT_ee", "timeSeedSC[0] - timeSeedSC[1]")
 	      .Define("deltaT_e", "(timeSeedSC - timeSecondToSeedSC)")
+	      .Define("deltaT_e1", "deltaT_e[0]")
+	      .Define("deltaT_e2", "deltaT_e[1]")
 	      .Define("A_e1", "amplitudeSeedSC[0] / noiseSeedSC[0]")
 	      .Define("A_e2", "amplitudeSeedSC[1] / noiseSeedSC[1]")
 	      .Define("effA_ee", "A_e1 * A_e2 / sqrt(A_e1 * A_e1 + A_e2 * A_e2)")
 	      .Define("timeSeedSC_corr", time_correction_vtx, {"vtxZ", "etaSCEle", "timeSeedSC"})
+	      .Define("timeSeedSC1_corr", "timeSeedSC_corr[0]")
+	      .Define("timeSeedSC2_corr", "timeSeedSC_corr[1]")
 	      .Define("deltaT_ee_corr", "timeSeedSC_corr[0] - timeSeedSC_corr[1]")
 	      .Define("timeSecondToSeedSC_corr", time_correction_vtx, {"vtxZ", "etaSCEle", "timeSecondToSeedSC"})
+	      .Define("timeSecondToSeedSC1_corr", "timeSecondToSeedSC_corr[0]")
+	      .Define("timeSecondToSeedSC2_corr", "timeSecondToSeedSC_corr[1]")
 	      .Define("deltaT_e_corr", "(timeSeedSC_corr - timeSecondToSeedSC_corr)")
+	      .Define("deltaT_e1_corr", "(timeSeedSC_corr - timeSecondToSeedSC_corr)[0]")
+	      .Define("deltaT_e2_corr", "(timeSeedSC_corr - timeSecondToSeedSC_corr)[1]")
 	      .Define("year", "runNumber >= 273158 && runNumber <= 284044 ? 2016 :"
 		      "runNumber >= 297050 && runNumber <= 306460 ? 2017 :"
 		      "runNumber >= 315257 && runNumber <= 325172 ? 2018 : 0");
@@ -166,7 +177,7 @@ int main (int argc, char ** argv)
 		output = output_files[(&s - &input_files[0])];
 		cout << output << endl;
 		size_t pos = output.find_last_of("/");
-		if (pos != string::npos)        path = output.substr(pos+1);	
+		if (pos != string::npos)        path = output.substr(0,pos+1);	
 	      }
 	      
 	      boost::filesystem::create_directory(path);
@@ -178,9 +189,10 @@ int main (int argc, char ** argv)
 					  //position
 					  "etaSCEle", "phiSCEle", "ySeedSC", "xSeedSC", 
 					  //seed 
-					  "amplitudeSeedSC", "timeSeedSC", "timeSeedSC_corr", "deltaT_ee", "deltaT_ee_corr", "effA_ee", 
+					  "amplitudeSeedSC", "timeSeedSC", "timeSeedSC1_corr", "timeSeedSC2_corr", "deltaT_ee", "deltaT_ee_corr", "effA_ee", 
 					  //second to seed
-					  "amplitudeSecondToSeedSC", "timeSecondToSeedSC", "timeSecondToSeedSC_corr", "deltaT_e", "deltaT_e_corr"
+					  "amplitudeSecondToSeedSC", "timeSecondToSeedSC", "timeSecondToSeedSC1_corr","timeSecondToSeedSC2_corr", 
+					  "deltaT_e1", "deltaT_e2", "deltaT_e1_corr", "deltaT_e2_corr"
 					  }
 				      );
 	      cout << "...done\n";

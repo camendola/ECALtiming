@@ -38,16 +38,17 @@ parser.add_argument('--byrunsize', dest='byrunsize', help='split graphs by run a
 parser.add_argument('--bysize', dest='bysize', help='split graphs by size only', default=False, action ='store_true')
 parser.add_argument('-e', '--era', default = None, help="era")
 parser.add_argument('--debug', dest='debug', help='debug', default=False, action ='store_true')
-parser.add_argument('--graph', dest='graph', help='debug', default=False, action ='store_true')
+parser.add_argument('--laser', dest='laser', help='laser', default = False,  action ='store_true')
+parser.add_argument('--color', dest='color', help='color', default = "")
 
 
 args = parser.parse_args()
 
 year = args.year 
-fileList = "filelists/ECALELF_Run2UL/Data_UL2016.log"
+fileList = "filelists/ECALELF_Run2UL_skimmed//Data_UL2016.log"
 fileList_extra = "filelists/ECALELF_Run2UL/Data_UL2016_extra.log"
 if year ==2017: 
-    fileList = "filelists/ECALELF_Run2UL/Data_ALCARECO_UL2017.log"
+    fileList = "filelists/ECALELF_Run2UL_skimmed//Data_ALCARECO_UL2017.log"
     fileList_extra = "filelists/ECALELF_Run2UL/Data_ALCARECO_UL2017_extra.log"
 if year ==2018: 
     fileList = "filelists/ECALELF_Run2UL_skimmed/Data_UL2018_106X_dataRun2_UL18.log"
@@ -62,6 +63,13 @@ if args.era:
     for file in files:
         if str(args.year)+args.era in file:
             newfiles.append(file)
+    files = newfiles
+
+newfiles = []
+if args.laser:
+    for file in files:
+        newfiles.append(file.replace("skimmed", "laser").replace(".root", args.color+args.color+".root"))
+        
     files = newfiles
 
 debug = args.debug
@@ -93,12 +101,8 @@ if args.bysize:    print("*** splitting graphs by number of events")
 #'invMass_rawSC', 'invMass_rawSC_esSC', 'invMass_highEta', 'ele1E', 'ele2E', 'ele1ecalE', 'ele2ecalE', 'angleEle12']
 
 
-#branches = ['runNumber','etaSCEle','phiSCEle',
-#            'xSeedSC','ySeedSC','etaEle','vtxZ',
-#            'R9Ele', 
-#            'timeSeedSC','timeSecondToSeedSC','amplitudeSeedSC', 'amplitudeSecondToSeedSC',
-#            'energySeedSC', 'energySecondToSeedSC', 'noiseSeedSC',
-#            'invMass','ele1E', 'ele2E', 'eventTime', 'gainSeedSC']
+
+
 
 
 #branches = ['runNumber','etaSCEle','phiSCEle',
@@ -144,54 +148,39 @@ df_chain = load_data.load_chain(files, "selected")
 
 #df_chain = df_chain.assign(deltaT_ee = df_chain['timeSeedSC1']-df_chain['timeSeedSC2'], deltaT_e1 = df_chain['timeSeedSC1']-df_chain['timeSecondToSeedSC1'], effA_ee = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],df_chain['noiseSeedSC1'], df_chain['amplitudeSeedSC2'], df_chain['noiseSeedSC2']), effA_e1 = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],df_chain['noiseSeedSC1'],df_chain['amplitudeSecondToSeedSC1'],df_chain['noiseSeedSC1']))
 
-df_chain = df_chain.assign(deltaT_ee = df_chain['timeSeedSC1']-df_chain['timeSeedSC2'],effA_ee = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],df_chain['noiseSeedSC1'], df_chain['amplitudeSeedSC2'], df_chain['noiseSeedSC2']))
 
 
-#def assign(df):
-#    df = df.assign(deltaT_ee = df['timeSeedSC1']-df['timeSeedSC2'], deltaT_e1 = df['timeSeedSC1']-df['timeSecondToSeedSC1'], effA_ee = compute.effective_amplitude(df['amplitudeSeedSC1'],df['noiseSeedSC1'], df['amplitudeSeedSC2'], df['noiseSeedSC2']), effA_e1 = compute.effective_amplitude(df['amplitudeSeedSC1'],df['noiseSeedSC1'],df['amplitudeSecondToSeedSC1'],df['noiseSeedSC1']))
-#    return df
+print (df_chain.columns)
+array_columns = []
+for n in range(df_chain.shape[1]):
+    if df_chain.dtypes[n] == object:
+        if df_chain.infer_objects().dtypes[n] == object:
+            array_columns.append(df_chain.columns[n])
+    if df_chain.dtypes[n] == bool:
+        df_chain[df_chain.columns[n]] = pd.Series(df_chain[df_chain.columns[n]].astype(int), index=df_chain.index)
 
-#df_chain = assign(df_chain)
+print(array_columns)
+for n in array_columns:
+    if df_chain[n].str.len().iloc[0] == 2:
+        df_chain[[n+'1', n+'2']] = pd.DataFrame(df_chain[n].tolist(), index=df_chain.index)
+    if df_chain[n].str.len().iloc[0] == 3:
+        df_chain[[n+'1', n+'2', n+'3']] = pd.DataFrame(df_chain[n].tolist(), index=df_chain.index)
+        df_chain = df_chain.drop(columns=n+'3')
+        df_chain = df_chain.drop(columns=n)
+del array_columns
+new_columns = []
+for n in range(df_chain.shape[1]):
+    print(df_chain.columns[n])
+    new_columns.append(df_chain.columns[n].replace("[0]","1").replace("[1]","2"))
 
-#df_chain['deltaT_ee'] = df_chain['timeSeedSC1']-df_chain['timeSeedSC2']
-#
-#df_chain['deltaEta_ee'] = df_chain['etaSCEle1']-df_chain['etaSCEle1']
-#df_chain['deltaPhi_ee'] = compute.delta_phi(df_chain['phiSCEle1'], df_chain['phiSCEle2'])
-#df_chain['deltaT_e1'] = df_chain['timeSeedSC1']-df_chain['timeSecondToSeedSC1']
-#
-#df_chain['deltaA_e1'] = df_chain['amplitudeSeedSC1']-df_chain['amplitudeSecondToSeedSC1']
-#df_chain['deltaA_e2'] = df_chain['amplitudeSeedSC2']-df_chain['amplitudeSecondToSeedSC2']
-#
-#
-#df_chain['effA_ee'] = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],
-#                                                        df_chain['noiseSeedSC1'],
-#                                                        df_chain['amplitudeSeedSC2'],
-#                                                        df_chain['noiseSeedSC2'])
-#
-#df_chain['effA_e1'] = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],
-#                                                        df_chain['noiseSeedSC1'],
-#                                                        df_chain['amplitudeSecondToSeedSC1'],
-#                                                        df_chain['noiseSeedSC1'])
-##
-##df_chain['effA_e2'] = compute.effective_amplitude(df_chain['amplitudeSeedSC2'],
-##                                                        df_chain['noiseSeedSC2'],
-##                                                        df_chain['amplitudeSecondToSeedSC2'],
-##                                                        df_chain['noiseSeedSC2'])
-#
-#df_chain['timeSeedSC1_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle1'], df_chain['timeSeedSC1'])
-#df_chain['timeSeedSC2_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle2'], df_chain['timeSeedSC2'])
-#df_chain['timeSecondToSeedSC1_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle1'], df_chain['timeSecondToSeedSC1'])
-#df_chain['timeSecondToSeedSC2_corr'] = compute.corr_time(df_chain['vtxZ'], df_chain['etaEle2'], df_chain['timeSecondToSeedSC2'])
-#
-#df_chain['deltaT_ee_corr'] = df_chain['timeSeedSC1_corr']-df_chain['timeSeedSC2_corr']
-#df_chain['deltaT_e1_corr'] = df_chain['timeSeedSC1_corr']-df_chain['timeSecondToSeedSC1_corr']
 
+df_chain.columns = new_columns
+print(df_chain.columns)
+
+df_chain = df_chain.assign(deltaT_ee_recal = df_chain['timeSeedSC1_recal']-df_chain['timeSeedSC2_recal'])
 
 #df = get_ids.appendIdxs(df, "1")
 #df = get_ids.appendIdxs(df, "2")
-
-#df_chain['transparencySeedSC1'] = compute.relative_response(df_chain['laserSeedSC[0]'],df_chain['alphaSeedSC[0]'])
-#df_chain['transparencySeedSC2'] = compute.relative_response(df_chain['laserSeedSC[1]'],df_chain['alphaSeedSC[1]'])
 
 
 tag = ""
@@ -199,7 +188,9 @@ if args.tag:
     tag = args.tag
     os.makedirs("plots/"+str(tag), exist_ok = True)
 
-outFile = ROOT.TFile.Open("plots/"+str(tag)+"/outPlot_"+str(year)+".root","RECREATE")
+era = ""
+if args.era: era = args.era
+outFile = ROOT.TFile.Open("plots/"+str(tag)+"/outPlot_"+str(year)+era+".root","RECREATE")
 config = config_reader.cfg_reader(args.cfg)
 
 hvarList    = config.readListOption("general::hvariables")
@@ -242,13 +233,7 @@ if hvarList:
         s_names = []
         for s in h.selections: 
             s_name = h.var+'_'+s.replace('-',"_")
-            print ("selecting")
             df_this = select.apply_selection(df_chain, s)[h.var]
-            print("selected")
-            rand_dir = ''.join(random.SystemRandom().choice(string.ascii_uppercase + string.digits) for _ in range(8))
-            pd.to_parquet(df_this.to_frame(), rand_dir)
-            df_this = pd.read_hdf(rand_dir)
-            print(df_this)
             plot_root = plt_to_TH1(h.plot(df_this), s_name)
             plot_root.Write()
             plt.close()
@@ -322,7 +307,7 @@ if mapList:
 
 outFile.Close()
 
-print("*** Output saved in plots/"+str(tag)+"/outPlot_"+str(year)+".root")
+print("*** Output saved in plots/"+str(tag)+"/outPlot_"+str(year)+era+".root")
 
 
 
