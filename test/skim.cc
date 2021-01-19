@@ -1,15 +1,15 @@
 // C++ version of the python analysis
 // - hopefully to fix memory issues
 // compile as a usual root code, e.g.
-//   g++ skim.cc -O3 -std=c++14 `root-config --libs --cflags` -lboost_filesystem -lboost_system -o skim.exe
+// g++ test/skim.cc -O3 -std=c++14 `root-config --libs --cflags` -lboost_filesystem -lboost_system -o test/skim.exe
 
 #include "ROOT/RDataFrame.hxx"
 #include "ROOT/RResultPtr.hxx"
 #include "ROOT/RVec.hxx"
 
-#include "modules/functions.cc"
+#include "../modules/functions.cc"
 
-#include "modules/cxxopts.hpp" // v2.2.0 from https://github.com/jarro2783/cxxopts
+#include "../modules/cxxopts.hpp" // v2.2.0 from https://github.com/jarro2783/cxxopts
 #include <boost/filesystem.hpp>
 
 #define eb_threshold "1.479"
@@ -40,7 +40,7 @@ vector<string> retrieve_files(string filelist)
 
 int main (int argc, char ** argv)
 {
-        cxxopts::Options options("a.out", "ECAL timing analysis");
+        cxxopts::Options options("bin/skim.exe", "ECAL timing analysis");
 
         options.add_options()
                 ("d,debug", "enable debugging printouts",                        cxxopts::value<bool>()->default_value("false"))
@@ -101,7 +101,7 @@ int main (int argc, char ** argv)
 	    cout << "@@@ Skimming:\n";
 	    cout << s << "\n";
 
-	    if (opts["debug"].as<bool>()) ROOT::EnableImplicitMT();
+	    if (opts["multithread"].as<bool>()) ROOT::EnableImplicitMT();
 	    ROOT::RDataFrame df("selected", s);
 
 	    // selections
@@ -125,7 +125,7 @@ int main (int argc, char ** argv)
 	    ROOT::RDF::RNode fn = df;
 	    
 	    fn = df.Define("deltaT_ee", "timeSeedSC[0] - timeSeedSC[1]")
-	      .Define("deltaT_e", "timeSeedSC - timeSecondToSeedSC")
+	      .Define("deltaT_e", "(timeSeedSC - timeSecondToSeedSC)")
 	      .Define("A_e1", "amplitudeSeedSC[0] / noiseSeedSC[0]")
 	      .Define("A_e2", "amplitudeSeedSC[1] / noiseSeedSC[1]")
 	      .Define("effA_ee", "A_e1 * A_e2 / sqrt(A_e1 * A_e1 + A_e2 * A_e2)")
@@ -169,9 +169,8 @@ int main (int argc, char ** argv)
 		if (pos != string::npos)        path = output.substr(pos+1);	
 	      }
 	      
-	      cout << "~~~> filesystem create dir...\n";
 	      boost::filesystem::create_directory(path);
-	      cout << "~~~> snapshot...\n";
+
 	      auto sn = fn.Snapshot("selected",output, 
 				      {
 					//event
@@ -181,7 +180,7 @@ int main (int argc, char ** argv)
 					  //seed 
 					  "amplitudeSeedSC", "timeSeedSC", "timeSeedSC_corr", "deltaT_ee", "deltaT_ee_corr", "effA_ee", 
 					  //second to seed
-					  "amplitudeSecondToSeedSC", "timeSecondToSeedSC", "timeSecondToSeedSC_corr", "deltaT_e", "deltaT_e_corr", "deltaT_e"
+					  "amplitudeSecondToSeedSC", "timeSecondToSeedSC", "timeSecondToSeedSC_corr", "deltaT_e", "deltaT_e_corr"
 					  }
 				      );
 	      cout << "...done\n";
