@@ -1,7 +1,6 @@
 // C++ recal (for large IOVs config, e.g. laser)
 // compile as a usual root code:
 // g++ test/recalelf.cpp -O3 -std=c++14 `root-config --libs --cflags` -lboost_filesystem -lboost_system -o bin/recalelf.exe -I /afs/cern.ch/user/c/camendol/recal/ -Wall /afs/cern.ch/user/c/camendol/recal/lib/libICManager.so /afs/cern.ch/user/c/camendol/recal/lib/ICManager.o
-
 #include "TTree.h"
 #include "TFile.h"
 
@@ -49,7 +48,7 @@ int main(int argc, char* argv[])
 	string input_file = opts["input"].as<string>();
 	string output_file = opts["output"].as<string>();
 	cout << "Input file "+input_file << endl; 
-	cout << "Output file " + output_file << endl; 
+	cout << "Output file " + output_file.replace(output_file.end() - 5, output_file.end(), laser+".root") << endl; 
 
 	
 	cout << "@ Loading IOVs..." <<endl; 	
@@ -63,6 +62,7 @@ int main(int argc, char* argv[])
 	cout << "@ Load input ntuple... " << endl; 
 	TFile* main_file  = new TFile (input_file.c_str());
 	TTree* main_tree = (TTree *) main_file->Get("selected");
+	main_tree->BuildIndex("runNumber", "eventNumber");
 
 	// old
 	UInt_t         runNumber;
@@ -71,26 +71,19 @@ int main(int argc, char* argv[])
 	Short_t        ySeedSC[3];
 	Float_t        timeSeedSC[3];
 
-	TBranch        *b_runNumber;   //!
-	TBranch        *b_eventTime;   //!
-	TBranch        *b_xSeedSC;     //!
-	TBranch        *b_ySeedSC;     //!
-	TBranch        *b_timeSeedSC;  //!
-
-
-	main_tree->SetBranchAddress("runNumber",  &runNumber,  &b_runNumber);
-	main_tree->SetBranchAddress("eventTime",  &eventTime,  &b_eventTime);
-	main_tree->SetBranchAddress("xSeedSC",    &xSeedSC,    &b_xSeedSC);
-	main_tree->SetBranchAddress("ySeedSC",    &ySeedSC,    &b_ySeedSC);
-	main_tree->SetBranchAddress("timeSeedSC", &timeSeedSC, &b_timeSeedSC); 
-
+	main_tree->SetBranchAddress("runNumber",  &runNumber);
+	main_tree->SetBranchAddress("eventTime",  &eventTime);
+	main_tree->SetBranchAddress("xSeedSC",    &xSeedSC);
+	main_tree->SetBranchAddress("ySeedSC",    &ySeedSC);
+	main_tree->SetBranchAddress("timeSeedSC", &timeSeedSC);
 
 	cout << "@ Clone tree to output... " << endl; 
-	TFile* recal_file = TFile::Open(output_file.replace(output_file.end() - 5, output_file.end(), laser+".root").c_str(), "RECREATE"); 
-
+	TFile* recal_file = TFile::Open(output_file.replace(output_file.end() - 5, output_file.end(), laser+".root").c_str(), "RECREATE");
+	int entries = main_tree->GetEntries();
+	recal_file->cd();
 	TTree * recal_tree = (TTree *) main_tree->CloneTree(0) ;
 	if (debug) recal_tree->Print();
-         
+
 	// new
 	Float_t calib1 = -999.;
 	Float_t calib2 = -999.;
@@ -114,7 +107,7 @@ int main(int argc, char* argv[])
 	recal_tree->Branch("timeSeedSC1_recal", &timeSeedSC1_recal, "timeSeedSC1_recal/f");
 	recal_tree->Branch("timeSeedSC2_recal", &timeSeedSC2_recal, "timeSeedSC2_recal/f");
 	  
-	int entries = main_tree->GetEntries();
+
 	for (int ev = 0 ; ev < entries; ++ev) 
 	  {
 	    if (ev % 10000 == 0)  cout << "- reading event " << ev << " of " << entries << endl ;
@@ -137,23 +130,23 @@ int main(int argc, char* argv[])
 	    calib1         = iovcalib.getIC(xSeedSC[0], ySeedSC[0], 0, runNumber);                     // physics calibration
 	    calib1_first   = iovcalib.getIC(xSeedSC[0], ySeedSC[0], 0, 315252);                        // physics calibration first 2018A run
 	    laser1_raw     = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, eventTime);                     // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
-
+	    
 	    // 40 mins = 2400 timestamp epochs => get back of about 39 mins to be sure to catch the previous iov 
 	    int steps_back = 0;
 	    unsigned int time = eventTime;
 	    while (laser1_raw == 1. && time > 1524931327 && steps_back < 5){
 	      time = time - 2350 ;
 	      laser1_raw     = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, time);
-
+	    
 	      steps_back += 1;
 	    }  
 	    laser1         = calib1_first - laser1_raw;
-
-
+	    
+	    
 	    calib2         = iovcalib.getIC(xSeedSC[1], ySeedSC[1], 0, runNumber);                     // physics calibration
 	    calib2_first   = iovcalib.getIC(xSeedSC[1], ySeedSC[1], 0, 315252);                        // physics calibration first 2018A run
 	    laser2_raw     = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, eventTime);                     // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
-
+	    
 	    // 40 mins = 2400 timestamp epochs => get back of about 39 mins to be sure to catch the previous iov 
 	    steps_back = 0;
 	    time = eventTime;
@@ -163,7 +156,7 @@ int main(int argc, char* argv[])
 	      steps_back += 1;
 	    }  
 	    laser2       = calib2_first - laser2_raw;
-
+	    
 	    timeSeedSC1_recal  = timeSeedSC[0] - calib1 + laser1;	    
 	    timeSeedSC2_recal  = timeSeedSC[1] - calib2 + laser2;
 
@@ -182,6 +175,7 @@ int main(int argc, char* argv[])
 	  }
 	recal_tree->Write();
 	recal_file->Write();
+	main_file->Close();
 	recal_file->Close();
 	return 0;
 }
