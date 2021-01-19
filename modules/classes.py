@@ -139,8 +139,6 @@ class graph:
 		binning = []
 		if self.var in config.config["grmarkerwidth"]:
                     cfg_binning = config.readOption("grmarkerwidth::"+self.var).split(",")
-                    print (cfg_binning)
-                    input()
                     if len(cfg_binning) == 3:
                         bins, xmin, xmax = cfg_binning
                         xmin = float(xmin.strip())
@@ -166,12 +164,11 @@ class graph:
 
 	def plot_simple(self, df, aggr_var):
 		if len(self.binning) > 0:
-			graph = df.groupby(pd.cut(df[self.varx], self.binning[:-1]))[self.vary]
+                        graph = df.groupby(pd.cut(df[self.varx], self.binning))[self.vary]
 		else:
 			graph = df.groupby(self.varx)[self.vary]
 		if hasattr(compute, aggr_var):
 			aggr_graph = graph.agg(getattr(compute, aggr_var))
-			print(aggr_graph)
 		elif hasattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var):
 			aggr_graph = getattr(pd.core.groupby.generic.DataFrameGroupBy, aggr_var)(graph)
 		else: 
