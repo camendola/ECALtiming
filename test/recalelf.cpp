@@ -131,9 +131,11 @@ int main(int argc, char* argv[])
 
 	    cout <<"time "<< eventTime <<endl;
 	    calib1         = iovcalib.getIC(xSeedSC[0], ySeedSC[0], 0, runNumber);                     // physics calibration
-	    calib1_first   = iovcalib.getIC(xSeedSC[0], ySeedSC[0], 0, 315252);                        // physics calibration first 2018A run
+	    //calib1_first   = iovcalib.getIC(xSeedSC[0], ySeedSC[0], 0, 315252);                        // physics calibration first 2018A run
+	    calib1_first   = iovcalib.getIC(xSeedSC[0], ySeedSC[0], 0, 316995);                        // physics calibration first 2018A run
 	    //laser1_first   = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, 1524773771);                  // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
-	    laser1_first   = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, 1524859200);                    // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
+	    //laser1_first   = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, 1524859200);                    // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
+	    laser1_first   = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, 1527491640);                    // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
 	    if (laser1_first == 1.0) continue;
 	    laser1_raw     = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, eventTime) - laser1_first;      // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
 	    
@@ -149,10 +151,12 @@ int main(int argc, char* argv[])
 	    
 	    
 	    calib2         = iovcalib.getIC(xSeedSC[1], ySeedSC[1], 0, runNumber);                     // physics calibration
-	    calib2_first   = iovcalib.getIC(xSeedSC[1], ySeedSC[1], 0, 315252);                        // physics calibration first 2018A run
+	    //calib2_first   = iovcalib.getIC(xSeedSC[1], ySeedSC[1], 0, 315252);                        // physics calibration first 2018A run
+	    calib2_first   = iovcalib.getIC(xSeedSC[1], ySeedSC[1], 0, 316995);                        // physics calibration first 2018A run
 	    
 	    //laser2_first   = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, 1524773771);                    // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
-	    laser2_first   = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, 1524859200);                    // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
+	    //laser2_first   = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, 1524859200);                    // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
+	    laser2_first   = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, 1527491640);                       // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
 	    if (laser2_first == 1.0) continue;
 	    
 	    cout <<"laser2_first"<< laser2_first <<endl;
@@ -166,7 +170,7 @@ int main(int argc, char* argv[])
 	      laser2_raw     = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, time) - laser2_raw;
 	      steps_back += 1;
 	    }  
-	    laser2       = calib2_first + laser2_raw; //
+	    laser2       = calib2_first - laser2_raw; 
 	    
 	    timeSeedSC1_recal  = timeSeedSC[0] - calib1 + laser1;	    
 	    timeSeedSC2_recal  = timeSeedSC[1] - calib2 + laser2;
