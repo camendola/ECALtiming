@@ -177,7 +177,7 @@ for n in range(df_chain.shape[1]):
 df_chain.columns = new_columns
 print(df_chain.columns)
 
-df_chain = df_chain.assign(deltaT_ee_recal = df_chain['timeSeedSC1_recal']-df_chain['timeSeedSC2_recal'])
+df_chain = df_chain.assign(deltaT_ee_recal = df_chain['timeSeedSC1_recal']-df_chain['timeSeedSC2_recal'], new_calib1 = - df_chain['calib1'] + df_chain['laser1'])
 
 #df = get_ids.appendIdxs(df, "1")
 #df = get_ids.appendIdxs(df, "2")
