@@ -7,12 +7,38 @@
 #include "../modules/cxxopts.hpp" // v2.2.0 from https://github.com/jarro2783/cxxopts
 #include <filesystem>
 
-#include <tuple>
+#include <iostream>
+#include <fstream>
+
+#include <utility>
 
 #include "../../recal/interface/ICManager.h"
 
 using namespace recal;
 using namespace std;
+
+
+pair < string, unsigned int > get_ref_era_time(unsigned int ref_run)
+{
+  ifstream data; 
+  string era, ref_era;
+  unsigned int run, time, ref_time;
+  data.open("data/ref_iovs.dat"); 
+  if(!data) { 
+    cerr << "Error: file could not be opened" << endl;
+    exit(1);
+  }
+  bool found = false;
+  while ( !data.eof() && !found) { 
+    data >> run >> era >> time ;
+    if (run == ref_run)  { 
+      ref_time = time;
+      ref_era = era;
+    }
+  }
+  data.close();
+  return make_pair(ref_era,ref_time);
+}
 
 
 int main(int argc, char* argv[])
@@ -22,6 +48,7 @@ int main(int argc, char* argv[])
         options.add_options()
 	  ("d,debug", "enable debugging printouts",                        cxxopts::value<bool>()->default_value("false"))
 	  ("y,year",  "year to process",                cxxopts::value<string>()->default_value("2018"))
+	  ("r,ref",   "reference run",                  cxxopts::value<unsigned int>()->default_value("0"))
 	  ("e, era",  "era to process",                 cxxopts::value<string>()->default_value("B"))
 	  ("i,input", "input files to process",         cxxopts::value<string >())
 	  ("l,laser", "which laser? g, b or empty",     cxxopts::value<string >()->default_value(""))
@@ -40,15 +67,22 @@ int main(int argc, char* argv[])
         string year   = opts["year"].as<string>();
         string era    = opts["era"].as<string>();
 	string laser  = opts["laser"].as<string>();
+	bool use_ref = (opts["ref"].as<unsigned int>() > 0);
+	unsigned int ref_run= opts["ref"].as< unsigned int >();
 
 	string path_calib = "/afs/cern.ch/work/c/camendol/CalibIOVs/ic-config.json"; 
 	//string path_calib = "/afs/cern.ch/work/c/camendol/CalibIOVs/dummy.json"; 
 	string path_laser = "/afs/cern.ch/work/c/camendol/LaserIOVs/"+year+"/"+era+"/ic-config"+laser+".json"; 
 	//string path_laser = "/afs/cern.ch/work/c/camendol/LaserIOVs/"+year+"/A/dummy.json"; 
+
 	string input_file = opts["input"].as<string>();
 	string output_file = opts["output"].as<string>();
 	cout << "Input file "+input_file << endl; 
-	cout << "Output file " + output_file.replace(output_file.end() - 5, output_file.end(), laser+".root") << endl; 
+	string suffix = laser;
+	if(use_ref) suffix = suffix + "_" + to_string(ref_run);
+	output_file.replace(output_file.end() - 5, output_file.end(), suffix+".root");
+
+	cout << "Output file " + output_file << endl; 
 
 	
 	cout << "@ Loading IOVs..." <<endl; 	
@@ -57,8 +91,17 @@ int main(int argc, char* argv[])
 
 	cout << " - laser calibration " << path_laser << endl;
 	ICManager iovlaser(path_laser);
-	cout << "~~~> Done" <<endl; 	
+	pair < string, unsigned int > ref_era_time = make_pair("", 0);
 
+	if (use_ref){
+	  ref_era_time = get_ref_era_time(ref_run);
+	  string path_laser_ref = "/afs/cern.ch/work/c/camendol/LaserIOVs/"+year+"/"+ref_era_time.first+"/ic-config"+laser+".json"; 
+	  cout << " - laser calibration (reference) " << path_laser_ref << endl;
+	  ICManager iovlaser_ref(path_laser_ref, ref_era_time.second);	
+	}
+
+	cout << "~~~> Done" <<endl; 	
+	
 	cout << "@ Load input ntuple... " << endl; 
 	TFile* main_file  = new TFile (input_file.c_str());
 	TTree* main_tree = (TTree *) main_file->Get("selected");
@@ -78,7 +121,8 @@ int main(int argc, char* argv[])
 	main_tree->SetBranchAddress("timeSeedSC", &timeSeedSC);
 
 	cout << "@ Clone tree to output... " << endl; 
-	TFile* recal_file = TFile::Open(output_file.replace(output_file.end() - 5, output_file.end(), laser+".root").c_str(), "RECREATE");
+
+	TFile* recal_file = TFile::Open(output_file.c_str(), "RECREATE");
 	int entries = main_tree->GetEntries();
 	recal_file->cd();
 	TTree * recal_tree = (TTree *) main_tree->CloneTree(0) ;
@@ -129,15 +173,15 @@ int main(int argc, char* argv[])
 	    timeSeedSC1_recal  = -999.;
 	    timeSeedSC2_recal  = -999.;
 
-	    cout <<"time "<< eventTime <<endl;
 	    calib1         = iovcalib.getIC(xSeedSC[0], ySeedSC[0], 0, runNumber);                     // physics calibration
-	    //calib1_first   = iovcalib.getIC(xSeedSC[0], ySeedSC[0], 0, 315252);                        // physics calibration first 2018A run
-	    calib1_first   = iovcalib.getIC(xSeedSC[0], ySeedSC[0], 0, 316995);                        // physics calibration first 2018A run
-	    //laser1_first   = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, 1524773771);                  // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
-	    //laser1_first   = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, 1524859200);                    // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
-	    laser1_first   = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, 1527491640);                    // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
+	    
+	    if(use_ref)
+	      {
+		calib1_first   = iovcalib.getIC(xSeedSC[0], ySeedSC[0], 0, ref_run);                       // physics calibration reference
+		laser1_first   = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, ref_era_time.second);           // laser calibration reference
+	      }
 	    if (laser1_first == 1.0) continue;
-	    laser1_raw     = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, eventTime) - laser1_first;      // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
+	    laser1_raw     = iovlaser.getIC(xSeedSC[0], ySeedSC[0], 0, eventTime) - laser1_first;      // laser calibration (raw deltaT w.r.t. beginning of the year)
 	    
 	    // 40 mins = 2400 timestamp epochs => get back of about 39 mins to be sure to catch the previous iov 
 	    int steps_back = 0;
@@ -151,17 +195,14 @@ int main(int argc, char* argv[])
 	    
 	    
 	    calib2         = iovcalib.getIC(xSeedSC[1], ySeedSC[1], 0, runNumber);                     // physics calibration
-	    //calib2_first   = iovcalib.getIC(xSeedSC[1], ySeedSC[1], 0, 315252);                        // physics calibration first 2018A run
-	    calib2_first   = iovcalib.getIC(xSeedSC[1], ySeedSC[1], 0, 316995);                        // physics calibration first 2018A run
+	    if (use_ref)
+	      {
+		calib2_first   = iovcalib.getIC(xSeedSC[1], ySeedSC[1], 0, ref_run);                       // physics calibration reference
+		laser2_first   = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, ref_era_time.second);           // laser calibration reference
+	      }
+	    if (laser2_first == 1.0) continue;	    
+	    laser2_raw     = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, eventTime) - laser2_first;      // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
 	    
-	    //laser2_first   = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, 1524773771);                    // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
-	    //laser2_first   = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, 1524859200);                    // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
-	    laser2_first   = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, 1527491640);                       // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
-	    if (laser2_first == 1.0) continue;
-	    
-	    cout <<"laser2_first"<< laser2_first <<endl;
-	    laser2_raw     = iovlaser.getIC(xSeedSC[1], ySeedSC[1], 0, eventTime) - laser2_first;               // laser calibration (blue + green) (raw deltaT w.r.t. beginning of the year)
-	    cout <<"laser2_raw"<< laser2_raw <<endl;
 	    // 40 mins = 2400 timestamp epochs => get back of about 39 mins to be sure to catch the previous iov 
 	    steps_back = 0;
 	    time = eventTime;
