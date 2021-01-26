@@ -40,7 +40,7 @@ parser.add_argument('-e', '--era', default = None, help="era")
 parser.add_argument('--debug', dest='debug', help='debug', default=False, action ='store_true')
 parser.add_argument('--laser', dest='laser', help='laser', default = False,  action ='store_true')
 parser.add_argument('--color', dest='color', help='color', default = "")
-
+parser.add_argument('--suffix', dest='suffix', help='suffix file names', default=None)
 
 args = parser.parse_args()
 
@@ -68,8 +68,13 @@ if args.era:
 newfiles = []
 if args.laser:
     for file in files:
-        newfiles.append(file.replace("skimmed", "laser").replace(".root", args.color+args.color+".root"))
-        
+        newfiles.append(file.replace("skimmed", "laser").replace(".root", args.color+".root"))
+    files = newfiles
+
+newfiles = []
+if args.suffix:
+    for file in files:
+        newfiles.append(file.replace(".root", args.suffix+".root"))
     files = newfiles
 
 debug = args.debug
@@ -78,6 +83,7 @@ if debug:
     files = files[-1:] 
     files_extra = files_extra[-1:]
 
+    
 print("*** Processing year "+str(args.year))
 if args.byrun:     print("*** splitting graphs by run")
 if args.byrunsize: print("*** splitting graphs by number of events, respecting the run boundaries")
@@ -99,9 +105,6 @@ if args.bysize:    print("*** splitting graphs by number of events")
 #'rawESEnergyPlane2SCEle', 'rawESEnergyPlane1SCEle', 'etaMCEle', 'phiMCEle', 'energyMCEle', 
 #'invMass_MC', 'ZEvent', 'invMass', 'invMass_ECAL_ele', 'invMass_ECAL_pho', 'invMass_5x5SC', 
 #'invMass_rawSC', 'invMass_rawSC_esSC', 'invMass_highEta', 'ele1E', 'ele2E', 'ele1ecalE', 'ele2ecalE', 'angleEle12']
-
-
-
 
 
 
@@ -186,7 +189,10 @@ df_chain = df_chain.assign(deltaT_ee_recal = df_chain['timeSeedSC1_recal']-df_ch
 tag = ""
 if args.tag:
     tag = args.tag
-    os.makedirs("plots/"+str(tag), exist_ok = True)
+if args.suffix: 
+    tag= tag+args.suffix
+
+os.makedirs("plots/"+str(tag), exist_ok = True)
 
 era = ""
 if args.era: era = args.era

@@ -36,7 +36,7 @@ def BB(df):
 
 def BBl(df):
         # exclude events with laser calibration == 1
-	mask = ((abs(df.etaSCEle1) < EBthreshold) & (abs(df.etaSCEle2) < EBthreshold) & (df.timeSeedSC1_recal != 0) & (df.timeSeedSC2_recal != 0))
+	mask = ((abs(df.etaSCEle1) < EBthreshold) & (abs(df.etaSCEle2) < EBthreshold) & (df.timeSeedSC1_recal != 0.) & (df.timeSeedSC2_recal != 0.))
 	return df[mask]
 
 def E1(df):
@@ -52,6 +52,7 @@ def E2(df):
 def B2(df):
 	mask = abs(df.etaSCEle2) < EBthreshold
 	return df[mask]
+
 
 # clean
 def clean_ee(df):
@@ -124,6 +125,14 @@ def Run1Sel_ee(df):
        
         #mask =  ((df.invMass > 60) & (df.invMass < 150)
         #        & (abs(df.timeSeedSC1 - df.timeSeedSC2) < 5))
+        return df[mask]
+
+def loweta(df):
+        mask = (abs(df.etaSCEle1) < 0.4)
+        return df[mask]
+
+def higheta(df):
+        mask = (abs(df.etaSCEle1) > 1.2)
         return df[mask]
 
 def AeffLow_ee(df):
