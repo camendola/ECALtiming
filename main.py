@@ -39,6 +39,7 @@ parser.add_argument('--bysize', dest='bysize', help='split graphs by size only',
 parser.add_argument('-e', '--era', default = None, help="era")
 parser.add_argument('--debug', dest='debug', help='debug', default=False, action ='store_true')
 parser.add_argument('--laser', dest='laser', help='laser', default = False,  action ='store_true')
+parser.add_argument('--extra', dest='extra', help='extra', default = False,  action ='store_true')
 parser.add_argument('--color', dest='color', help='color', default = "")
 parser.add_argument('--suffix', dest='suffix', help='suffix file names', default=None)
 
@@ -46,24 +47,30 @@ args = parser.parse_args()
 
 year = args.year 
 fileList = "filelists/ECALELF_Run2UL_skimmed//Data_UL2016.log"
-fileList_extra = "filelists/ECALELF_Run2UL/Data_UL2016_extra.log"
+fileList_extra = "filelists/ECALELF_Run2UL_skimmed/Data_UL2016_extra.log"
 if year ==2017: 
     fileList = "filelists/ECALELF_Run2UL_skimmed//Data_ALCARECO_UL2017.log"
-    fileList_extra = "filelists/ECALELF_Run2UL/Data_ALCARECO_UL2017_extra.log"
+    fileList_extra = "filelists/ECALELF_Run2UL_skimmed/Data_ALCARECO_UL2017_extra.log"
 if year ==2018: 
     fileList = "filelists/ECALELF_Run2UL_skimmed/Data_UL2018_106X_dataRun2_UL18.log"
-    fileList_extra = "filelists/ECALELF_Run2UL/Data_UL2018_extra.log"
+    fileList_extra = "filelists/ECALELF_Run2UL_skimmed/Data_UL2018_106X_dataRun2_UL18_extra.log"
 
 
 files = [line. rstrip('\n') for line in open(fileList)]
 files_extra = [line. rstrip('\n') for line in open(fileList_extra)]
+
 print (files)
+print (files_extra)
+
 newfiles = []
+newfiles_extra = []
 if args.era:
     for file in files:
         if str(args.year)+args.era in file:
             newfiles.append(file)
+            newfiles_extra.append(file)
     files = newfiles
+    files_extra = newfiles_extra
 
 newfiles = []
 if args.laser:
@@ -89,7 +96,6 @@ if args.byrun:     print("*** splitting graphs by run")
 if args.byrunsize: print("*** splitting graphs by number of events, respecting the run boundaries")
 if args.bysize:    print("*** splitting graphs by number of events")
 
-
 ### ECALELF original content:
 #['runNumber', 'lumiBlock', 'eventNumber', 'eventTime', 'nBX', 'isTrain', 'mcGenWeight', 'HLTfire', 
 #'rho', 'nPV', 'nPU', 'vtxX', 'vtxY', 'vtxZ', 
@@ -107,35 +113,26 @@ if args.bysize:    print("*** splitting graphs by number of events")
 #'invMass_rawSC', 'invMass_rawSC_esSC', 'invMass_highEta', 'ele1E', 'ele2E', 'ele1ecalE', 'ele2ecalE', 'angleEle12']
 
 
-
-#branches = ['runNumber','etaSCEle','phiSCEle',
-#            'etaEle',
-#            'R9Ele', 
-#            'timeSeedSC','timeSecondToSeedSC','amplitudeSeedSC', 
-#            'energySeedSC', 'noiseSeedSC',
-#            'invMass','ele1E', 'ele2E', 'eventTime', 'gainSeedSC']
-
-#branches = ['runNumber','etaSCEle1','etaSCEle2', 'phiSCEle1','phiSCEle2', 
-#            'xSeedSC1','xSeedSC2','ySeedSC1','ySeedSC2', 'etaEle1','etaEle2','vtxZ',
-#            'R9Ele1', 'R9Ele2',
-#            'timeSeedSC1','timeSeedSC2', 'timeSecondToSeedSC1','timeSecondToSeedSC2','amplitudeSeedSC1', 'amplitudeSeedSC2','amplitudeSecondToSeedSC1','amplitudeSecondToSeedSC2',
-#            'energySeedSC1', 'energySeedSC2','energySecondToSeedSC1','energySecondToSeedSC2', 'noiseSeedSC1','noiseSeedSC2',
-#            'invMass','ele1E', 'ele2E', 'eventTime']
-
-#branches = ['runNumber','etaSCEle1','etaSCEle2', 
-#            'timeSeedSC1','timeSeedSC2', 'timeSecondToSeedSC1','timeSecondToSeedSC2',
-#            'invMass', 'eventTime', "gainSeedSC1", "gainSeedSC2", "R9Ele1", "R9Ele2", "noiseSeedSC1", "noiseSeedSC2", "amplitudeSeedSC1", "amplitudeSeedSC2", "amplitudeSecondToSeedSC1"]
-
-branches_extra = ['noiseSeedSC1_GT', 'noiseSeedSC2_GT', 'eventTime', 'noiseSecondToSeedSC1_GT','iTTSeedSC1', 'scSeedSC1','iTTSecondToSeedSC1', 'scSecondToSeedSC1',]
-
 #df_chain = load_data.load_chain(files, "selected", branches, suffix = "extra", other_tree_name = "extended", other_branch = branches_extra)
 
 #df_chain = load_data.load_hdf_file(files[0], "selected", branches) if args.debug else load_data.load_hdf(files, "selected", branches)
-df_chain = load_data.load_chain(files, "selected") 
+df_chain = load_data.load_chain(files, "selected")
+print(df_chain.shape)
+if args.extra:
+    df_chain = df_chain.sort_values(by=['eventTime'])
+    df_extra = load_data.load_chain(files_extra,"extended") 
+    df_extra = df_extra.sort_values(by=['eventTime'])
+    print(df_extra["eventTime"].astype("uint32"))
+    print(df_chain["eventTime"])
+    print(df_extra.shape)
+    df_chain = pd.concat([df_chain.reset_index(), df_extra.reset_index()], axis=1)
+
+    df_extra = pd.DataFrame()
+    df_chain = df_chain.loc[:,~df_chain.columns.duplicated()]
 
 #print(type(df_chain))
 #df_extra = load_data.load_chain(files, "extended", branches_extra, suffix = "extra") # taking only X, Y, Z of first hit
-#df_chain = pd.concat([df_original.set_index('runNumber'), df_extra.set_index('runNumber')], axis=1, join = 'inner').reset_index()
+#
 #df_chain = df_original
 #print(df_chain.keys())
 #print("entries = %d" % df_chain.shape[0])
@@ -180,10 +177,14 @@ for n in range(df_chain.shape[1]):
 df_chain.columns = new_columns
 print(df_chain.columns)
 
-df_chain = df_chain.assign(deltaT_ee_recal = df_chain['timeSeedSC1_recal']-df_chain['timeSeedSC2_recal'], new_calib1 = - df_chain['calib1'] + df_chain['laser1'])
+if args.laser:
+    df_chain = df_chain.assign(deltaT_ee_recal = df_chain['timeSeedSC1_recal']-df_chain['timeSeedSC2_recal'], new_calib1 = - df_chain['calib1'] + df_chain['laser1'])
+if args.extra:
+    df_chain = df_chain.assign(effA_e1 = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],df_chain['noiseSeedSC1'],df_chain['amplitudeSecondToSeedSC1'],df_chain['noiseSeedSC1']))
+    df_chain = df_chain.assign(effA_e2 = compute.effective_amplitude(df_chain['amplitudeSeedSC2'],df_chain['noiseSeedSC2'],df_chain['amplitudeSecondToSeedSC2'],df_chain['noiseSeedSC2']))
 
-#df = get_ids.appendIdxs(df, "1")
-#df = get_ids.appendIdxs(df, "2")
+#df = get_ids.appendIdxs(df_chain, "1")
+#df = get_ids.appendIdxs(df_chain, "2")
 
 
 tag = ""
@@ -259,7 +260,8 @@ if hvar2DList:
             s_name = h.name+'_'+s.replace('-',"_")
             df_this = select.apply_selection(df_chain, s)[[h.varx, h.vary]]
             s_names.append(s_name)
-            plot_root = plt_to_TH2(h.plot(df_this), s_name)
+            if "density" in h.options: do_density = True
+            plot_root = plt_to_TH2(h.plot(df_this, do_density), s_name)
             plot_root.Write()
             plt.close()
         del df_this
