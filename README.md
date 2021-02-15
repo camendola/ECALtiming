@@ -1,5 +1,5 @@
 # ECAL timing
-Code for ECAL timing performance evaluation with (ECALElf)[https://project-cms-ecal-calibration.web.cern.ch/project-cms-ecal-calibration/ECALELF_doc/dd/d7a/group__NTUPLESTRUCTURE.html] ntuples.
+Code for ECAL timing performance evaluation with [ECALElf](https://project-cms-ecal-calibration.web.cern.ch/project-cms-ecal-calibration/ECALELF_doc/dd/d7a/group__NTUPLESTRUCTURE.html) ntuples.
 
 ## Sumbit to lxplus condor system
 ```
