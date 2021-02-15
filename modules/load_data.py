@@ -51,6 +51,7 @@ def load_chain(ntuples, tree_name, branch = None, suffix = None, other_tree_name
         #df_b = load_read_root(block, tree_name, branch)
         if suffix: 
             block = block.replace(".root", "_"+suffix+".root")
+            df_b = load_file(block, other_tree_name, other_branch)
             #df_b_other = load_file(block, other_tree_name, other_branch).fillna(-999.)
             #df_chunk_list = []
             #for g, df_chunk in df_b.groupby('runNumber'):

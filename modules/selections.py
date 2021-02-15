@@ -112,10 +112,18 @@ def HighR9_e1(df):
 	return df[mask]
 
 def Run1Sel_e1(df):
-	mask = (((df.amplitudeSeedSC1 * np.where(abs(df.etaSCEle1) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) < 120) 
-                & ((df.amplitudeSecondToSeedSC1 * np.where(abs(df.etaSCEle1) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) < 120) 
-                & (abs(df.amplitudeSeedSC1.div(df.amplitudeSecondToSeedSC1))< 1.2))
-	return df[mask]
+        mask = (((df.amplitudeSeedSC1 * np.where(abs(df.etaSCEle1) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) < 120) 
+                & ((df.amplitudeSecondToSeedSC1 * np.where(abs(df.etaSCEle1) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) < 120)
+                & abs(df.amplitudeSeedSC1.div(df.amplitudeSecondToSeedSC1))< 1.2)
+        
+        return df[mask]
+
+def Run1Sel_e2(df):
+        mask = (((df.amplitudeSeedSC2 * np.where(abs(df.etaSCEle2) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) < 120) 
+                & ((df.amplitudeSecondToSeedSC2 * np.where(abs(df.etaSCEle2) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) < 120)
+                & abs(df.amplitudeSeedSC2.div(df.amplitudeSecondToSeedSC2))< 1.2)
+        
+        return df[mask]
 
 def Run1Sel_ee(df):
         mask = (((df.amplitudeSeedSC1 * np.where(abs(df.etaSCEle1) > EBthreshold, ADC2GEV_E, ADC2GEV_B)) < 120)

@@ -70,8 +70,8 @@ int main(int argc, char* argv[])
 	pair <string, unsigned int> ref_era_time = get_ref_era_time(ref_run);
 
 	string path_calib = "/afs/cern.ch/work/c/camendol/CalibIOVs/ic-config.json"; 
-	string path_laser = "/afs/cern.ch/work/c/camendol/LaserIOVs/"+year+"/"+era+"/ic-config"+laser+".json"; 
-	string path_laser_ref = "/afs/cern.ch/work/c/camendol/LaserIOVs/"+year+"/"+ref_era_time.first+"/ic-config"+laser+".json"; 
+	string path_laser = "/afs/cern.ch/work/c/camendol/LaserIOVs_new/"+year+"/"+era+"/ic-config"+laser+".json"; 
+	string path_laser_ref = "/afs/cern.ch/work/c/camendol/LaserIOVs_new/"+year+"/"+ref_era_time.first+"/ic-config"+laser+".json"; 
 	if (debug) {
 	  path_calib = "/afs/cern.ch/work/c/camendol/CalibIOVs/dummy.json"; 
 	  path_laser = "/afs/cern.ch/work/c/camendol/LaserIOVs/"+year+"/A/dummy.json"; 

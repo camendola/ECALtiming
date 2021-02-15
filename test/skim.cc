@@ -189,7 +189,7 @@ int main (int argc, char ** argv)
 					  //position
 					  "etaSCEle", "phiSCEle", "ySeedSC", "xSeedSC", 
 					  //seed 
-					  "amplitudeSeedSC", "timeSeedSC", "timeSeedSC1_corr", "timeSeedSC2_corr", "deltaT_ee", "deltaT_ee_corr", "effA_ee", 
+					  "amplitudeSeedSC", "timeSeedSC", "timeSeedSC1_corr", "timeSeedSC2_corr", "deltaT_ee", "deltaT_ee_corr", "effA_ee", "noiseSeedSC",
 					  //second to seed
 					  "amplitudeSecondToSeedSC", "timeSecondToSeedSC", "timeSecondToSeedSC1_corr","timeSecondToSeedSC2_corr", 
 					  "deltaT_e1", "deltaT_e2", "deltaT_e1_corr", "deltaT_e2_corr"
