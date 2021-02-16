@@ -3,7 +3,7 @@ Code for ECAL timing performance evaluation with [ECALElf](https://project-cms-e
 
 ## Sumbit to lxplus condor system
 ```
-python scripts/sumbit_condor.py -f <commands file> (-q <job_flavour> --tag <jobs_folder_name>) 	
+python scripts/submit_condor.py -f <commands file> -p <commands pattern> (-q <job_flavour> --tag <jobs_folder_name>) 	
 ```
 
 Job flavours:
