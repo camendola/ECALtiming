@@ -25,23 +25,21 @@ parser.add_argument(
     "-e", "--extra", dest="extra", default=None, help="extraCalib file "
 )
 parser.add_argument("-d", "--debug", dest="debug", default=False, action="store_true")
+
 parser.add_argument("-n", "--noise", dest="noise", default=False, action="store_true")
+parser.add_argument("-L", "--lumi", dest="lumi", default=False, action="store_true")
 args = parser.parse_args()
 
 branches = [
-    "xSeedSC",
-    "ySeedSC",
-    "etaSCEle",
     #'noiseSeedSC',
-    "eventTime",
+    "eventNumber",
     "runNumber",
 ]
 
 branches_extra = [
+    "eventNumber",
     "rawIdRecHitSCEle1",
     "rawIdRecHitSCEle2",
-    "energyRecHitSCEle1",
-    "energyRecHitSCEle2",
 ]
 
 
@@ -62,142 +60,127 @@ if not os.path.isfile(file_extra):
     sys.exit()
 
 df = load_data.load_file(file, "selected", branches)
-branches_split = ["xSeedSC", "ySeedSC", "etaSCEle"]  # ,"noiseSeedSC"]
-for br in branches_split:
-    if br + "[1]" in df.columns:
-        df[[br + "1", br + "2"]] = df[[br + "[0]", br + "[1]"]]
-        branches_todrop.append(br + "1")
-        branches_todrop.append(br + "2")
-        df = df.drop(columns=[br + "[0]", br + "[1]", br + "[2]"])
-
+print(df)
 
 initial_size = df.shape[0]
 print(str(float(process.memory_info().rss) / 1000000))  #
 
-extra1_chunk_list = []
-extra2_chunk_list = []
+extra_chunk_list = []
+extratime_chunk_list = []
+
+event_list = df.reset_index().eventNumber.drop_duplicates().sort_values().tolist()
+
 for df_extra_chunk in tqdm(
     uproot.pandas.iterate(
         file_extra, "extraCalibTree", branches_extra, entrysteps=100000, flatten=False
     )
 ):
-    df_sort_chunk = pd.concat(
-        [
-            df_extra_chunk.energyRecHitSCEle1.apply(
-                lambda x: sorted(range(len(x)), key=x.__getitem__, reverse=True)
-                if len(x) > 1
-                else [0, 0]
-            ),
-            df_extra_chunk.energyRecHitSCEle2.apply(
-                lambda x: sorted(range(len(x)), key=x.__getitem__, reverse=True)
-                if len(x) > 1
-                else [0, 0]
-            ),
-        ],
-        axis=1,
-        keys=["order1", "order2"],
-    )
-    df_extra_chunk = pd.concat([df_extra_chunk, df_sort_chunk], axis=1).drop(
-        columns=["energyRecHitSCEle1", "energyRecHitSCEle2"]
-    )
-    del df_sort_chunk
+    df_extra_chunk = df_extra_chunk[
+        df_extra_chunk["eventNumber"].isin(event_list)
+    ]  # .sort_values(by=["eventNumber"]).reset_index()
+    df_extratime_chunk = df_extra_chunk["eventNumber"].astype("uint32")
+    df_extra_chunk = df_extra_chunk.drop(columns=["eventNumber"])
 
-    df_extra1_seed_chunk = (
-        df_extra_chunk.apply(lambda x: x.str[x.order1[0]], axis=1)
-        .drop(columns=["order1", "order2", "rawIdRecHitSCEle2"])
-        .fillna(-999)
-        .astype("int")
+    df_extra_seed_chunk = df_extra_chunk.stack().str[0].unstack().dropna().astype("int")
+    df_extra_secondtoseed_chunk = (
+        df_extra_chunk.stack().str[1].unstack().dropna().astype("int")
     )
-    df_extra1_secondtoseed_chunk = (
-        df_extra_chunk.apply(lambda x: x.str[x.order1[1]], axis=1)
-        .drop(columns=["order1", "order2", "rawIdRecHitSCEle2"])
-        .fillna(-999)
-        .astype("int")
+    df_extra_chunk = pd.concat(
+        [df_extra_seed_chunk, df_extra_secondtoseed_chunk], axis=1
     )
-    df_extra1_chunk = pd.concat(
-        [df_extra1_seed_chunk, df_extra1_secondtoseed_chunk], axis=1
-    )
-    del df_extra1_seed_chunk, df_extra1_secondtoseed_chunk
-    df_extra1_chunk.columns = ["rawIDSeedSC1", "rawIDSecondToSeedSC1"]
 
-    df_extra2_seed_chunk = (
-        df_extra_chunk.apply(lambda x: x.str[x.order2[0]], axis=1)
-        .drop(columns=["order1", "order2", "rawIdRecHitSCEle1"])
-        .fillna(-999)
-        .astype("int")
-    )
-    df_extra2_secondtoseed_chunk = (
-        df_extra_chunk.apply(lambda x: x.str[x.order2[1]], axis=1)
-        .drop(columns=["order1", "order2", "rawIdRecHitSCEle1"])
-        .fillna(-999)
-        .astype("int")
-    )
-    df_extra2_chunk = pd.concat(
-        [df_extra2_seed_chunk, df_extra2_secondtoseed_chunk], axis=1
-    )
-    del df_extra2_seed_chunk, df_extra2_secondtoseed_chunk
-    df_extra2_chunk.columns = ["rawIDSeedSC2", "rawIDSecondToSeedSC2"]
+    del df_extra_seed_chunk, df_extra_secondtoseed_chunk
+    df_extra_chunk.columns = [
+        "rawIDSeedSC1",
+        "rawIDSeedSC2",
+        "rawIDSecondToSeedSC1",
+        "rawIDSecondToSeedSC2",
+    ]
+
     gc.collect()
-    df_extra_chunk = pd.DataFrame()
-    extra1_chunk_list.append(df_extra1_chunk)
-    extra2_chunk_list.append(df_extra2_chunk)
 
-df_extra1 = pd.concat(extra1_chunk_list)
-df_extra2 = pd.concat(extra2_chunk_list)
-del extra1_chunk_list, extra2_chunk_list
-df = pd.concat([df, df_extra1, df_extra2], axis=1).dropna().astype("int")
-del df_extra1, df_extra2
+    extra_chunk_list.append(df_extra_chunk)
+    extratime_chunk_list.append(df_extratime_chunk)
+    print(str(float(process.memory_info().rss) / 1000000))  #
+
+df_extra = pd.concat(extra_chunk_list)
+df_extratime = pd.concat(extratime_chunk_list)
+del extra_chunk_list, extratime_chunk_list
+df_extra = (
+    pd.concat([df_extra, df_extratime], axis=1).reset_index().drop(columns="index")
+)
+
+del df_extratime
+
+df = df.set_index("eventNumber")
+df = df[~df.index.duplicated(keep="first")]
+
+df_extra = df_extra.set_index("eventNumber")
+df_extra = df_extra[~df_extra.index.duplicated(keep="first")]
+df = pd.concat([df, df_extra], axis=1).reset_index()
+
+types = {
+    "rawIDSeedSC1": "int",
+    "rawIDSeedSC2": "int",
+    "rawIDSecondToSeedSC1": "int",
+    "rawIDSecondToSeedSC2": "int",
+}
+
+df = df.dropna().astype(types)
+del df_extra
 
 gc.collect()
-df_extra1 = pd.DataFrame()
-df_extra2 = pd.DataFrame()
-print(process.memory_info().rss)  #
-# -------------------
-print("@@@ Loading fill lumi table...")
-
-lumi_file = "/afs/cern.ch/work/c/camendol/fill_lumi/lumi_Run1_Run2_unixTime.dat"
-df_lumi_chunks = pd.read_csv(
-    lumi_file, sep="\s+", usecols=[0, 1, 3, 6], comment="#", chunksize=5000
-)
-lumi_chunk_list = []
-for df_lumi_chunk in tqdm(df_lumi_chunks):
-    df_lumi_chunk[["Run", "Fill"]] = df_lumi_chunk["Run:Fill"].str.split(
-        ":", n=1, expand=True
-    )
-    df_lumi_chunk["LS"] = df_lumi_chunk["LS"].str.split(":", n=1, expand=True)[0]
-    df_lumi_chunk = df_lumi_chunk[
-        (df_lumi_chunk["Beam_Status"] == "STABLE_BEAMS")
-    ].drop(columns=["Beam_Status", "Run:Fill"])
-    lumi_chunk_list.append(df_lumi_chunk)
-# concat the list into dataframe
-df_lumi = pd.concat(lumi_chunk_list)
-del lumi_chunk_list
-group = (
-    df_lumi.groupby("Run")
-    .agg({"Recorded(/ub)": "sum", "LS": "count", "Fill": "first"})
-    .reset_index()
-)
-df["Fill"] = df["runNumber"].map(group.astype("int").set_index("Run")["Fill"])
-df["LumiSections"] = df["runNumber"].map(group.astype("int").set_index("Run")["LS"])
-df["RecordedLumi"] = df["runNumber"].map(
-    group.astype({"Run": "int"}).set_index("Run")["Recorded(/ub)"]
-)
-df["LumiInst"] = df["RecordedLumi"] / 23000
+df_extra = pd.DataFrame()
+df_extratime = pd.DataFrame()
 
 print(str(float(process.memory_info().rss) / 1000000))  #
-del df_lumi, group
+# -------------------
+if args.lumi:
+    print("@@@ Loading fill lumi table...")
 
-gc.collect()
-df_lumi = pd.DataFrame()
-group = pd.DataFrame()
+    lumi_file = "/afs/cern.ch/work/c/camendol/fill_lumi/lumi_Run1_Run2_unixTime.dat"
+    df_lumi_chunks = pd.read_csv(
+        lumi_file, sep="\s+", usecols=[0, 1, 3, 6], comment="#", chunksize=5000
+    )
+    lumi_chunk_list = []
+    for df_lumi_chunk in tqdm(df_lumi_chunks):
+        df_lumi_chunk[["Run", "Fill"]] = df_lumi_chunk["Run:Fill"].str.split(
+            ":", n=1, expand=True
+        )
+        df_lumi_chunk["LS"] = df_lumi_chunk["LS"].str.split(":", n=1, expand=True)[0]
+        df_lumi_chunk = df_lumi_chunk[
+            (df_lumi_chunk["Beam_Status"] == "STABLE_BEAMS")
+        ].drop(columns=["Beam_Status", "Run:Fill"])
+        lumi_chunk_list.append(df_lumi_chunk)
+    # concat the list into dataframe
+    df_lumi = pd.concat(lumi_chunk_list)
+    del lumi_chunk_list
+    group = (
+        df_lumi.groupby("Run")
+        .agg({"Recorded(/ub)": "sum", "LS": "count", "Fill": "first"})
+        .reset_index()
+    )
+    df["Fill"] = df["runNumber"].map(group.astype("int").set_index("Run")["Fill"])
+    df["LumiSections"] = df["runNumber"].map(group.astype("int").set_index("Run")["LS"])
+    df["RecordedLumi"] = df["runNumber"].map(
+        group.astype({"Run": "int"}).set_index("Run")["Recorded(/ub)"]
+    )
+    df["LumiInst"] = df["RecordedLumi"] / 23000
+
+    print(str(float(process.memory_info().rss) / 1000000))  #
+    del df_lumi, group
+
+    gc.collect()
+    df_lumi = pd.DataFrame()
+    group = pd.DataFrame()
 # ---------------------
 print("before appending:", str(process.memory_info().rss / 1000000))  #
 print("@@@ Appending DetIDs and geometric/electronic elements...")
 
-df = get_ids.appendIdxs(df, "1")
-df = get_ids.appendIdxs(df, "2")
-df = get_ids.appendIdxs(df, "1", "SecondToSeed")
-df = get_ids.appendIdxs(df, "2", "SecondToSeed")
+df = get_ids.appendIdxs(df, "1").dropna()
+df = get_ids.appendIdxs(df, "2").dropna()
+df = get_ids.appendIdxs(df, "1", "SecondToSeed").dropna()
+df = get_ids.appendIdxs(df, "2", "SecondToSeed").dropna()
 
 print("after appending:", str(float(process.memory_info().rss) / 1000000))  #
 
