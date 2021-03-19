@@ -186,10 +186,11 @@ int main (int argc, char ** argv)
 				      {
 					//event
 					"runNumber", "eventNumber", "eventTime", "year",
-					  //position
-					  "etaSCEle", "phiSCEle", "ySeedSC", "xSeedSC", 
+					  //SC
+					  "etaSCEle", "phiSCEle", "fbremEle",
 					  //seed 
 					  "amplitudeSeedSC", "timeSeedSC", "timeSeedSC1_corr", "timeSeedSC2_corr", "deltaT_ee", "deltaT_ee_corr", "effA_ee", "noiseSeedSC",
+					  "ySeedSC", "xSeedSC", 
 					  //second to seed
 					  "amplitudeSecondToSeedSC", "timeSecondToSeedSC", "timeSecondToSeedSC1_corr","timeSecondToSeedSC2_corr", 
 					  "deltaT_e1", "deltaT_e2", "deltaT_e1_corr", "deltaT_e2_corr"
