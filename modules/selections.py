@@ -74,6 +74,22 @@ def B1_etaminus(df):
     mask = ((abs(df.etaSCEle1) < EBthreshold) & (df.etaSCEle1 < 0))
     return df[mask]
 
+def B1_etaplus_eplus(df):
+    mask = ((abs(df.etaSCEle1) < EBthreshold) & (df.etaSCEle1 > 0) & (df.chargeEle1 == 1))
+    return df[mask]
+
+def B1_etaminus_eplus(df):
+    mask = ((abs(df.etaSCEle1) < EBthreshold) & (df.etaSCEle1 < 0) & (df.chargeEle1 == 1))
+    return df[mask]
+
+def B1_etaplus_eminus(df):
+    mask = ((abs(df.etaSCEle1) < EBthreshold) & (df.etaSCEle1 > 0) & (df.chargeEle1 == -1))
+    return df[mask]
+
+def B1_etaminus_eminus(df):
+    mask = ((abs(df.etaSCEle1) < EBthreshold) & (df.etaSCEle1 < 0) & (df.chargeEle1 == -1))
+    return df[mask]
+
 
 def E2(df):
     mask = abs(df.etaSCEle2) > EBthreshold

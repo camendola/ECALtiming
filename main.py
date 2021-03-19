@@ -16,9 +16,7 @@ import random, string
 import modules.classes as obj
 
 import pandas as pd
-import dask
-from dask import delayed
-import dask.dataframe as dd
+
 import gc
 import ROOT
 import datetime
@@ -29,49 +27,27 @@ import psutil
 
 process = psutil.Process(os.getpid())
 
-parser = argparse.ArgumentParser(description="Command line parser of plotting options")
+# fmt: off
+parser = argparse.ArgumentParser(description = "Command line parser of plotting options")
 
-parser.add_argument("--year", type=int, dest="year", help="which year", default=2016)
-parser.add_argument("--tag", dest="tag", help="tag for plot", default=None)
-parser.add_argument("--cfg", dest="cfg", help="cfg file", default=None)
-parser.add_argument(
-    "--byrun",
-    dest="byrun",
-    help="split graphs by run only",
-    default=False,
-    action="store_true",
-)
-parser.add_argument(
-    "--byrunsize",
-    dest="byrunsize",
-    help="split graphs by run and by size",
-    default=False,
-    action="store_true",
-)
-parser.add_argument(
-    "--bysize",
-    dest="bysize",
-    help="split graphs by size only",
-    default=False,
-    action="store_true",
-)
-parser.add_argument("-e", "--era", default=None, help="era")
-parser.add_argument(
-    "--debug", dest="debug", help="debug", default=False, action="store_true"
-)
-parser.add_argument(
-    "--laser", dest="laser", help="laser", default=False, action="store_true"
-)
-parser.add_argument(
-    "--extra", dest="extra", help="extra", default=False, action="store_true"
-)
-parser.add_argument("--color", dest="color", help="color", default="")
-parser.add_argument("--suffix", dest="suffix", help="suffix file names", default=None)
+parser.add_argument("--year",      dest = "year",      help = "which year",                      default = 2016, type=int)
+parser.add_argument("--tag",       dest = "tag",       help = "tag for plot",                    default = None)
+parser.add_argument("--cfg",       dest = "cfg",       help = "cfg file",                        default = None)
+parser.add_argument("--byrun",     dest = "byrun",     help = "split graphs by run only",        default = False, action = "store_true")
+parser.add_argument("--byrunsize", dest = "byrunsize", help = "split graphs by run and by size", default = False, action = "store_true")
+parser.add_argument("--bysize",    dest = "bysize",    help = "split graphs by size only",       default = False, action = "store_true")
+parser.add_argument("-e", "--era", dest = "era",       help = "era",   default = None)
+parser.add_argument("--debug",     dest = "debug",     help = "debug", default = False, action = "store_true")
+parser.add_argument("--laser",     dest = "laser",     help = "laser", default = False, action = "store_true")
+parser.add_argument("--extra",     dest = "extra",     help = "extra", default = False, action = "store_true")
+parser.add_argument("--suffix",    dest = "suffix",    help = "suffix", default = None)
+parser.add_argument("--color",     dest = "color",     help = "color", default = "")
+# fmt: on
 
 args = parser.parse_args()
 
 year = args.year
-fileList = "filelists/ECALELF_Run2UL_skimmed//Data_UL2016.log"
+fileList = "filelists/ECALELF_Run2UL_skimmed/Data_UL2016.log"
 fileList_extra = "filelists/ECALELF_Run2UL_skimmed/Data_UL2016_extra.log"
 if year == 2017:
     fileList = "filelists/ECALELF_Run2UL_skimmed//Data_ALCARECO_UL2017.log"
@@ -83,8 +59,8 @@ if year == 2018:
     )
 
 
-files = [line.rstrip("\n") for line in open(fileList)]
-files_extra = [line.rstrip("\n") for line in open(fileList_extra)]
+files = [line.rstrip("\n") for line in open(fileList) if not line.startswith("#")]
+files_extra = [line.rstrip("\n") for line in open(fileList_extra) if not line.startswith("#")]
 
 print(files)
 print(files_extra)
@@ -95,7 +71,7 @@ if args.era:
     for file in files:
         if str(args.year) + args.era in file:
             newfiles.append(file)
-            newfiles_extra.append(file)
+            newfiles_extra.append(file.replace(".root", "_extra.root"))
     files = newfiles
     files_extra = newfiles_extra
 
@@ -131,7 +107,7 @@ if args.bysize:
 ### ECALELF original content:
 # ['runNumber', 'lumiBlock', 'eventNumber', 'eventTime', 'nBX', 'isTrain', 'mcGenWeight', 'HLTfire',
 #'rho', 'nPV', 'nPU', 'vtxX', 'vtxY', 'vtxZ',
-#'eleID', 'chargeEle', 'recoFlagsEle', 'etaEle', 'phiEle', 'fremEle', 'R9Ele',
+#'eleID', 'chargeEle', 'recoFlagsEle', 'etaEle', 'phiEle', 'fbremEle', 'R9Ele',
 #'gsfTrackLengthFromVtxP', 'gsfTrackLengthFromTangents', 'etaSCEle', 'phiSCEle', 'nHitsSCEle',
 #'avgLCSC', 'rawEnergySCEle', 'mustEnergySCEle', 'energy_ECAL_ele', 'energy_ECAL_pho',
 #'energyUncertainty_ECAL_ele', 'energyUncertainty_ECAL_pho',
@@ -148,22 +124,21 @@ if args.bysize:
 df_chain = load_data.load_chain(files, "selected")
 print(df_chain.shape)
 if args.extra:
-    df_chain = df_chain.sort_values(by=["eventTime"])
+    df_chain = df_chain.sort_values(by=["eventNumber"])
     df_extra = load_data.load_chain(files_extra, "extended")
-    df_extra = df_extra.sort_values(by=["eventTime"])
-    print(df_extra["eventTime"].astype("uint32"))
-    print(df_chain["eventTime"])
-    print(df_extra.shape)
-    df_chain = pd.concat([df_chain.reset_index(), df_extra.reset_index()], axis=1)
+    df_extra = df_extra.sort_values(by=["eventNumber"])
+
+    df_chain = df_chain.set_index("eventNumber")
+    df_chain = df_chain[~df_chain.index.duplicated(keep='first')]
+    
+    df_extra = df_extra.set_index("eventNumber")
+    df_extra = df_extra[~df_extra.index.duplicated(keep='first')]
+    df_chain = pd.concat([df_chain, df_extra], axis=1).reset_index()
 
     df_extra = pd.DataFrame()
     df_chain = df_chain.loc[:, ~df_chain.columns.duplicated()]
 
 
-# df_chain = df_chain.assign(deltaT_ee = df_chain['timeSeedSC1']-df_chain['timeSeedSC2'], deltaT_e1 = df_chain['timeSeedSC1']-df_chain['timeSecondToSeedSC1'], effA_ee = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],df_chain['noiseSeedSC1'], df_chain['amplitudeSeedSC2'], df_chain['noiseSeedSC2']), effA_e1 = compute.effective_amplitude(df_chain['amplitudeSeedSC1'],df_chain['noiseSeedSC1'],df_chain['amplitudeSecondToSeedSC1'],df_chain['noiseSeedSC1']))
-
-
-print(df_chain.columns)
 array_columns = []
 for n in range(df_chain.shape[1]):
     if df_chain.dtypes[n] == object:
@@ -194,6 +169,7 @@ for n in range(df_chain.shape[1]):
 
 
 df_chain.columns = new_columns
+
 print(df_chain.columns)
 
 if args.laser:
@@ -237,10 +213,12 @@ outFile = ROOT.TFile.Open(
 )
 config = config_reader.cfg_reader(args.cfg)
 
-hvarList = config.readListOption("general::hvariables")
+# fmt: off
+hvarList   = config.readListOption("general::hvariables")
 hvar2DList = config.readListOption("general::hvariables2D")
-grList = config.readListOption("general::grvariables")
-mapList = config.readListOption("general::mvariables")
+grList     = config.readListOption("general::grvariables")
+mapList    = config.readListOption("general::mvariables")
+# fmt: on
 
 toPlot = []
 if hvarList:
@@ -295,11 +273,11 @@ if hvar2DList:
         h = obj.histo2d(hvars, config)
         results = []
         s_names = []
-        print(h.selections)
         for s in h.selections:
             s_name = h.name + "_" + s.replace("-", "_")
             df_this = select.apply_selection(df_chain, s)[[h.varx, h.vary]]
             s_names.append(s_name)
+            do_density = False
             if "density" in h.options:
                 do_density = True
             plot_root = plt_to_TH2(h.plot(df_this, do_density), s_name)

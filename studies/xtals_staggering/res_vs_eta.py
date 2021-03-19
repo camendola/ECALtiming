@@ -1,5 +1,5 @@
 import ROOT
-from ROOT import TFile, TCanvas
+from ROOT import TFile, TCanvas, TH1F
 
 
 def Frame(gPad, width=2):
@@ -57,8 +57,8 @@ infile = TFile.Open("plots/staggered_2021_03_15/outPlot_2018.root")
 
 ca = TCanvas("ca", "ca", 600, 600)
 ca.Draw()
-var = "timeSeedSC1_corr"
-sel = ["B1", "EtaLt0p4", "EtaGt0p4Lt0p8", "EtaGt0p8Lt1p4"]
+var = "timeSeedSC1"
+sel = ["B1", "EtaLt0p4_1", "EtaGt0p4Lt0p8_1", "EtaGt0p8Lt1p4_1"]
 label = ["|#eta|<1.4", "|#eta|<0.4", "0.4<|#eta|<0.8", "0.8<|#eta|<1.4"]
 color = [ROOT.kBlack, ROOT.kRed, ROOT.kGreen, ROOT.kBlue]
 norm = True
@@ -66,7 +66,12 @@ hist = [infile.Get(var + "_" + s) for s in sel]
 
 ### hadd hist 2 for higher stats
 for h, s in zip(hist, sel):
-    h.Add(infile.Get(var.replace("1", "2") + "_" + s))
+    infile.ls()
+    print(var.replace("1", "2") + "_" + s.replace("_1", "_2").replace("B1", "B2"))
+    h2 = infile.Get(
+        var.replace("1", "2") + "_" + s.replace("_1", "_2").replace("B1", "B2")
+    )
+    h.Add(h2)
 
 
 if norm:
@@ -89,7 +94,7 @@ for l, c, h in zip(label, color, hist):
         h.Draw("same hist")
     else:
         h.SetTitle("")
-        ROOT.gStyle.SetOptStat(0)
+
         h.SetMaximum(ymax + ymax / 2)
         h.Draw("hist")
         h.GetXaxis().SetTitle("e arrival time [ns]")
@@ -97,7 +102,7 @@ for l, c, h in zip(label, color, hist):
     l = l + " - mean = {:.2f} ns, RMS = {:.2f} ns".format(h.GetMean(), h.GetRMS())
     leg.AddEntry(h, l, "l")
     i += 1
-
+ROOT.gStyle.SetOptStat(0)
 leg.Draw("same")
 ca.Update()
 ca.Modified()

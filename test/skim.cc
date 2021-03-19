@@ -187,7 +187,7 @@ int main (int argc, char ** argv)
 					//event
 					"runNumber", "eventNumber", "eventTime", "year",
 					  //SC
-					  "etaSCEle", "phiSCEle", "fbremEle",
+					  "etaSCEle", "phiSCEle", "fbremEle","chargeEle", 
 					  //seed 
 					  "amplitudeSeedSC", "timeSeedSC", "timeSeedSC1_corr", "timeSeedSC2_corr", "deltaT_ee", "deltaT_ee_corr", "effA_ee", "noiseSeedSC",
 					  "ySeedSC", "xSeedSC", 
