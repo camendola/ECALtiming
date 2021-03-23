@@ -90,6 +90,45 @@ def B1_etaminus_eminus(df):
     mask = ((abs(df.etaSCEle1) < EBthreshold) & (df.etaSCEle1 < 0) & (df.chargeEle1 == -1))
     return df[mask]
 
+def B2_etaplus(df):
+    mask = ((abs(df.etaSCEle2) < EBthreshold) & (df.etaSCEle2 > 0))
+    return df[mask]
+
+def B2_etaminus(df):
+    mask = ((abs(df.etaSCEle2) < EBthreshold) & (df.etaSCEle2 < 0))
+    return df[mask]
+
+def B2_etaplus_eplus(df):
+    mask = ((abs(df.etaSCEle2) < EBthreshold) & (df.etaSCEle2 > 0) & (df.chargeEle2 == 1))
+    return df[mask]
+
+def B2_etaminus_eplus(df):
+    mask = ((abs(df.etaSCEle2) < EBthreshold) & (df.etaSCEle2 < 0) & (df.chargeEle2 == 1))
+    return df[mask]
+
+def B2_etaplus_eminus(df):
+    mask = ((abs(df.etaSCEle2) < EBthreshold) & (df.etaSCEle2 > 0) & (df.chargeEle2 == -1))
+    return df[mask]
+
+def B2_etaminus_eminus(df):
+    mask = ((abs(df.etaSCEle2) < EBthreshold) & (df.etaSCEle2 < 0) & (df.chargeEle2 == -1))
+    return df[mask]
+
+def Amp400(df):
+    mask = (df.amplitudeSeedSC1 > 400)
+    return df[mask]
+
+def fbrem20(df):
+    mask = (df.fbremEle1 < 20)
+    return df[mask]
+
+def ele2_Amp400(df):
+    mask = (df.amplitudeSeedSC2 > 400)
+    return df[mask]
+
+def ele2_fbrem20(df):
+    mask = (df.fbremEle2 < 20)
+    return df[mask]
 
 def E2(df):
     mask = abs(df.etaSCEle2) > EBthreshold

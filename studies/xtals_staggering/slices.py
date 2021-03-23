@@ -24,7 +24,7 @@ def Frame(gPad, width=2):
     l.DrawLineNDC(lm, bm, lm, tm)
 
 
-def TextAuto(gPad, text, size=0.05, font=42, align=13, line=1):
+def TextAuto(gPad, text, size=0.03, font=42, align=13, line=1):
     x = 0
     y = 0
 
@@ -56,13 +56,14 @@ def GetNDC(x):
     return (x - gPad.GetX1()) / (gPad.GetX2() - gPad.GetX1())
 
 
-infile = TFile.Open("plots/staggered_2021_03_15/outPlot_2018.root")
+
 
 
 parser = argparse.ArgumentParser(description="Command line parser of plotting options")
 
 parser.add_argument("--tag", dest="tag", help="tag root file", default=None)
 parser.add_argument("--name", dest="name", help="2d histo name", default=None)
+parser.add_argument("--add", dest="add", help="additional 2d histo name", default=None)
 
 parser.add_argument(
     "--logz", dest="logz", help="log z", default=False, action="store_true"
@@ -98,12 +99,16 @@ parser.add_argument("--ylabel", dest="ylabel", help="ylabel", default=None)
 
 args = parser.parse_args()
 
-
+infile = TFile.Open("plots/"+args.tag+"/outPlot_2018.root")
+if not args.show: ROOT.gROOT.SetBatch(True)
 ca = TCanvas("ca", "ca", 800, 600)
 ca.Draw()
 
 h2d = infile.Get(args.name)
 h2d.SetTitle("")
+if args.add: 
+    h2d_add = infile.Get(args.add)
+    h2d.Add(h2d_add)
 
 h2d.GetXaxis().SetTitle(args.xlabel)
 h2d.GetYaxis().SetTitle(args.ylabel)
@@ -150,12 +155,14 @@ if args.fit and args.med:
     else:
         graph.Draw("same p")
         graphmed.Draw("same p")
-        legend = ROOT.TLegend(0.5, 0.91, ROOT.gPad.GetRightMargin(), 0.95)
+        legend = ROOT.TLegend(0.5, 0.91, 0.8, 0.95)
         legend.SetBorderSize(0)
         legend.SetNColumns(2)
         legend.AddEntry(graph, "Gaussian fit", "pl")
         legend.AddEntry(graphmed, "Median", "p")
         legend.Draw("same")
+
+if not args.show: ROOT.gROOT.SetBatch(True)
 
 if args.text:
     text = TextAuto(ROOT.gPad, args.text, align=11)
@@ -166,4 +173,7 @@ Frame(ROOT.gPad)
 ca.Update()
 ca.Modified()
 
-input()
+
+
+ca.SaveAs("plots/"+args.tag+"/2018/"+ args.name + "_histo" * args.hist+ "_fit" * args.fit + "_median" * args.med + ".pdf")
+ca.SaveAs("plots/"+args.tag+"/2018/"+ args.name + "_histo" * args.hist+ "_fit" * args.fit + "_median" * args.med + ".png")

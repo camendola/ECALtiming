@@ -211,6 +211,9 @@ if args.era:
 outFile = ROOT.TFile.Open(
     "plots/" + str(tag) + "/outPlot_" + str(year) + era + ".root", "RECREATE"
 )
+
+os.system("cp " + args.cfg + " plots/" + str(tag))
+
 config = config_reader.cfg_reader(args.cfg)
 
 # fmt: off

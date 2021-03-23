@@ -68,8 +68,6 @@ def slices_median(histo):
     ROOT.gROOT.SetBatch(False)
     x = np.asarray(center, dtype=np.float64)
     y = np.asarray(median, dtype=np.float64)
-    print(x, y)
-    print(center, median)
     graph = TGraphAsymmErrors(x.size, x, y)
 
     return graph
