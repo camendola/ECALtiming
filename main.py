@@ -344,14 +344,15 @@ if mapList:
                     )
                     continue
                 print(opt.split(":")[1:])
-                if len(opt.split(":")[1:]) > 1:
-                    print(
-                        "### WARNING multiple aggregate variables not implemented, using ",
-                        opt.split(":")[1],
-                    )
+
                 aggr_var = opt.split(":")[1]
-                plot_root = table_to_TH2(map2d.plot(df_this, aggr_var), s_name)
+                dump = False # dump table in rECAL style
+                if len(opt.split(":")[1:]) > 1:
+                    if "dump" in opt.split(":")[2]: dump = True
+                plot_root = table_to_TH2(map2d.plot(df_this, aggr_var, ("plots/" + str(tag) + "/"+ str(year) + era) if dump else None), aggr_var + "_" + s_name)
                 plot_root.Write()
+
+                    
             del df_this
             gc.collect()
 

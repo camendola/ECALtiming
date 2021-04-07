@@ -97,27 +97,28 @@ parser.add_argument("--ylabel", dest="ylabel", help="ylabel", default=None)
 
 args = parser.parse_args()
 
-infile = TFile.Open("plots/"+args.tag+"/outPlot_2018"+args.era+".root")
+
 if not args.show: ROOT.gROOT.SetBatch(True)
 
 ca = TCanvas("ca", "ca", 800, 600)
 ca.Draw()
 
 
-#selnames = ["etaplus_eminus", "etaplus_eplus", "etaminus_eplus", "etaminus_eminus"]
-#labels   = ["side: #eta+; charge: e-", "side: #eta+; charge: e+", "side: #eta-; charge: e+", "side: #eta-; charge: e-"]
-selnames = ["etaplus", "etaminus"]
-labels   = ["side: #eta+", "side: #eta-"]
+eras = ["A","B", "C", "D", ""]
+labels   = ["2018A", "2018B", "2018C", "2018D", "2018ABCD"]
 
-color = [ROOT.kBlack, ROOT.kRed, ROOT.kGreen, ROOT.kBlue]
 
-selgraph = {}
-for i, sel in enumerate(selnames):
-    print(args.name.replace("XXX", sel))
-    h2d = infile.Get(args.name.replace("XXX", sel))
+
+
+color = [ROOT.kBlack, ROOT.kRed, ROOT.kGreen, ROOT.kBlue, ROOT.kOrange]
+
+eragraph = {}
+for i, era in enumerate(eras):
+    infile = TFile.Open("plots/"+args.tag+"/outPlot_2018"+era+".root")
+    h2d = infile.Get(args.name)
     h2d.SetTitle("")
     if args.add:
-        h2d_add = infile.Get(args.add.replace("XXX", sel))
+        h2d_add = infile.Get(args.add)
         h2d.Add(h2d_add)
         del h2d_add
     if args.fit:
@@ -131,87 +132,63 @@ for i, sel in enumerate(selnames):
     graph.SetMarkerColor(color[i])
     graph.SetLineColor(color[i])
     
-    selgraph[sel] = graph
+    eragraph[i] = graph
 
 
-ymax = max([g.GetHistogram().GetMaximum() for g in selgraph.values()])
-ymin = min([g.GetHistogram().GetMinimum() for g in selgraph.values()])
+ymax = max([g.GetHistogram().GetMaximum() for g in eragraph.values()])
+ymin = min([g.GetHistogram().GetMinimum() for g in eragraph.values()])
 
-mg_all      = ROOT.TMultiGraph()
-mg_etaplus  = ROOT.TMultiGraph()
-mg_etaminus = ROOT.TMultiGraph()
-mg_eplus    = ROOT.TMultiGraph()
-mg_eminus   = ROOT.TMultiGraph()
+mg      = ROOT.TMultiGraph()
 
 
-for k, v in selgraph.items():
+for k, v in eragraph.items():
     print (k, v)
-    mg_all.Add(v)
-    if "etaplus" in k:
-        print("---> in etaplus") 
-        mg_etaplus.Add(v)
-    if "etaminus" in k:
-        print("---> in etaminus") 
-        mg_etaminus.Add(v)
-    if "eplus" in k:
-        print("---> in eplus") 
-        mg_eplus.Add(v)
-    if "eminus" in k:
-        print("---> in eminus") 
-        mg_eminus.Add(v)
-
-#mgs = [mg_all, mg_etaplus, mg_etaminus, mg_eplus, mg_eminus]
-#mg_labels = ["all", "etaplus", "etaminus", "eplus", "eminus"]
-mgs = [mg_all, mg_etaplus, mg_etaminus]
-mg_labels = ["all", "etaplus", "etaminus"]
+    mg.Add(v)
 
 if not args.show:
     ROOT.gROOT.SetBatch(True)
 
 
-for mg, mg_label in zip(mgs, mg_labels):
-
-    mg.GetXaxis().SetTitle(args.xlabel)
-    mg.GetYaxis().SetTitle(args.ylabel)
+mg.GetXaxis().SetTitle(args.xlabel)
+mg.GetYaxis().SetTitle(args.ylabel)
     
-    legend = ROOT.TLegend(0.5, 0.7, 0.89, 0.89)
-    legend.SetBorderSize(0)
-    print (mg_label)
-    for g in mg.GetListOfGraphs():
-        print ("   ", g.GetName())
-        legend.AddEntry(g, g.GetName(), "pl")
+legend = ROOT.TLegend(0.5, 0.7, 0.89, 0.89)
+legend.SetBorderSize(0)
 
-    ROOT.gStyle.SetOptStat(0)
-    Frame(ROOT.gPad)
+for g in mg.GetListOfGraphs():
+    print ("   ", g.GetName())
+    legend.AddEntry(g, g.GetName(), "pl")
+    
+ROOT.gStyle.SetOptStat(0)
+Frame(ROOT.gPad)
 
-    mg.Draw("ap")
+mg.Draw("ap")
 
-    mg.SetMaximum(ymax*3)
-    mg.SetMinimum(ymin)
+mg.SetMaximum(ymax*3)
+mg.SetMinimum(ymin)
+    
+legend.Draw("same") 
+if args.text:
+    text = TextAuto(ROOT.gPad, args.text, align=11)
 
-    legend.Draw("same") 
-    if args.text:
-        text = TextAuto(ROOT.gPad, args.text, align=11)
-
-    ca.Update()
-    ca.Modified()
-    ca.SaveAs(
-        "plots/"
-        + args.tag
-        + "/2018/"
-        + args.era + "/"
-        + args.name.replace("XXX", mg_label)
-        + "_fit" * args.fit
-        + "_median" * args.med
-        + ".pdf"
+ca.Update()
+ca.Modified()
+ca.SaveAs(
+    "plots/"
+    + args.tag
+    + "/2018/"
+    + args.name
+    + "_fit" * args.fit
+    + "_median" * args.med
+    + ".pdf"
     )
-    ca.SaveAs(
-        "plots/"
-        + args.tag
-        + "/2018/"
-        + args.era + "/"
-        + args.name.replace("XXX", mg_label)
-        + "_fit" * args.fit
-        + "_median" * args.med
-        + ".png"
-    )
+
+ca.SaveAs(
+    "plots/"
+    + args.tag
+    + "/2018/"
+    + args.name
+    + "_fit" * args.fit
+    + "_median" * args.med
+    + ".png"
+)

@@ -148,7 +148,7 @@ class histo2d:
                     df[self.varx],
                     df[self.vary],
                     bins=[self.xbinning, self.ybinning],
-                    density=True,
+                    #density=True,
                 )
             else:
                 plot = plt.hist2d(
@@ -165,7 +165,7 @@ class histo2d:
                     df[self.vary],
                     bins=[self.xbinning[0], self.ybinning],
                     range=[self.xbinning[-2:], [self.ybinning[0], self.ybinning[-1]]],
-                    density=True,
+                    #density=True,
                 )
             else:
                 plot = plt.hist2d(
@@ -303,7 +303,22 @@ class map2d:
             options = config.readOption("moptions::" + self.var).split(",")
         return [opt.strip() for opt in options]
 
-    def plot(self, df, aggr_var):
+    def dump(self, table, dest):
+        df_r = table.stack().reset_index()
+        df_r.columns = [[self.vary, self.varx, self.varz]]
+        print("STACKED", df_r)
+        df_r["part"] = 0
+        df_r["part"] = df_r["part"].astype("int")
+        df_r["zero"] = df_r["part"].astype("float")
+        df_r[self.varz] = df_r[self.varz].mean() - df_r[self.varz] 
+        df_r[[self.vary, self.varx, "part", self.varz, "zero"]].to_csv(
+            dest+"_TOF_recal.txt", 
+            index=False,
+            sep=" ",
+            header=False)
+        del df_r
+
+    def plot(self, df, aggr_var, dest):
         if hasattr(compute, aggr_var):
             table = pd.pivot_table(
                 df,
@@ -320,6 +335,8 @@ class map2d:
                 values=self.varz,
                 aggfunc=getattr(np, aggr_var),
             )
+        print (table)
         table.dropna()
         table.dropna(axis=1)
-        return plot
+        if dest: self.dump(table, dest)
+        return table

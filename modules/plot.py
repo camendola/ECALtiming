@@ -6,7 +6,6 @@ import pandas as pd
 import matplotlib as mpl
 import matplotlib.pyplot as plt
 
-
 # conversion to ROOT
 def plt_to_TH1(plot, name=""):
     print("@ 1D hist: ", name)
@@ -21,7 +20,7 @@ def plt_to_TH1(plot, name=""):
     hist = ROOT.TH1F(name, name, nbins, xmin, xmax)
     for bin, content in enumerate(bincontent):
         hist.SetBinContent(bin + 1, content)
-    h.Sumw2()
+    #hist.Sumw2()
     return hist
 
 
@@ -35,7 +34,7 @@ def plt_to_TH2(plot, name=""):
     for i in range(0, len(x) - 1):
         for j in range(0, len(y) - 1):
             hist.SetBinContent(i + 1, j + 1, bincontent[i, j])
-    h.Sumw2()
+    #hist.Sumw2()
     return hist
 
 
@@ -44,10 +43,6 @@ def table_to_TH2(table, name):
     table = table.fillna(0)
     x = np.asarray(list(table.columns.values), dtype=np.float64)
     y = np.asarray(list(table.index.values), dtype=np.float64)
-    if x[0] < 0:
-        x = x[1:]
-    if y[0] < 0:
-        y = y[1:]
     x = np.append(x, x[-1] + 1)
     y = np.append(y, y[-1] + 1)
 
@@ -58,11 +53,11 @@ def table_to_TH2(table, name):
         isPandas = True
     i = 0
     for row in table.itertuples():
-        for j, val in enumerate(list(table.columns.values)):
+        for j, value in enumerate(list(table.columns.values)):
             if isPandas:
-                hist.SetBinContent(i + 1, j + 1, getattr(row, "_" + str(j + 1)))
+                hist.SetBinContent(j + 1, i + 1, getattr(row, "_" + str(j + 1)))
             else:
-                hist.SetBinContent(i + 1, j + 1, row[j])
+                hist.SetBinContent(j + 1, i + 1, row[j+1])
         i += 1
 
     return hist

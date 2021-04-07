@@ -62,6 +62,7 @@ def GetNDC(x):
 parser = argparse.ArgumentParser(description="Command line parser of plotting options")
 
 parser.add_argument("--tag", dest="tag", help="tag root file", default=None)
+parser.add_argument("--era", dest="era", help="era", default="")
 parser.add_argument("--name", dest="name", help="2d histo name", default=None)
 parser.add_argument("--add", dest="add", help="additional 2d histo name", default=None)
 
@@ -95,11 +96,12 @@ parser.add_argument("--zmax", dest="zmax", type=float, help="zmax", default=None
 parser.add_argument("--text", dest="text", help="text", default=None)
 parser.add_argument("--xlabel", dest="xlabel", help="xlabel", default=None)
 parser.add_argument("--ylabel", dest="ylabel", help="ylabel", default=None)
+parser.add_argument("--zlabel", dest="zlabel", help="zlabel", default=None)
 
 
 args = parser.parse_args()
 
-infile = TFile.Open("plots/"+args.tag+"/outPlot_2018.root")
+infile = TFile.Open("plots/"+args.tag+"/outPlot_2018"+args.era+".root")
 if not args.show: ROOT.gROOT.SetBatch(True)
 ca = TCanvas("ca", "ca", 800, 600)
 ca.Draw()
@@ -112,6 +114,8 @@ if args.add:
 
 h2d.GetXaxis().SetTitle(args.xlabel)
 h2d.GetYaxis().SetTitle(args.ylabel)
+if args.zlabel: h2d.GetZaxis().SetTitle(args.zlabel)
+
 if args.hist:
     h2d.Draw("colz")
 ca.SetRightMargin(0.17)
@@ -175,5 +179,5 @@ ca.Modified()
 
 
 
-ca.SaveAs("plots/"+args.tag+"/2018/"+ args.name + "_histo" * args.hist+ "_fit" * args.fit + "_median" * args.med + ".pdf")
-ca.SaveAs("plots/"+args.tag+"/2018/"+ args.name + "_histo" * args.hist+ "_fit" * args.fit + "_median" * args.med + ".png")
+ca.SaveAs("plots/"+args.tag+"/2018/"+ args.era+"/"+args.name + "_histo" * args.hist+ "_fit" * args.fit + "_median" * args.med + ".pdf")
+ca.SaveAs("plots/"+args.tag+"/2018/"+ args.era+"/"+args.name + "_histo" * args.hist+ "_fit" * args.fit + "_median" * args.med + ".png")
