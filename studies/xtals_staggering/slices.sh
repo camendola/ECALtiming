@@ -4,7 +4,8 @@ ERA=$1
 #TAG="staggered_2021_03_21"
 #TAG="staggered_2021_03_26_ietaiphi_vtxcorr"
 #TAG="staggered_2021_03_26_ietaiphi"
-TAG="staggered_2021_03_26_maps"
+#TAG="staggered_2021_03_26_maps"
+TAG="/staggered_2021_04_08_TOFcorr_byxtal"
 
 mkdir -p plots/$TAG/${YEAR}/${ERA}
 
@@ -102,6 +103,7 @@ cp index.php /eos/home-c/camendol/www/ECALtiming/$TAG/${YEAR}/${ERA}
 
 ##fullyear
 #python studies/xtals_staggering/slices_eras.py --tag $TAG  --median          --name "time_vs_ieta_Amp400_fbrem20_B1" --add "time_vs_ieta_2_ele2_Amp400_ele2_fbrem20_B2"  --xlabel "i#eta seed" --ylabel "e arrival time [ns]" --text "A > 400; fbrem < 20%"
+python studies/xtals_staggering/slices_eras.py --tag $TAG  --median          --name "time_vs_ieta_Amp400_fbrem20_B1"  --xlabel "i#eta seed" --ylabel "e arrival time [ns]" --text "A > 400; fbrem < 20%"
 #python studies/xtals_staggering/slices_selections.py --tag $TAG --fit --median    --name "time_vs_iphi_Amp400_fbrem20_B1_XXX"  --add "time_vs_iphi_2_ele2_Amp400_ele2_fbrem20_B2_XXX"  --xlabel "i#phi seed" --ylabel "e arrival time [ns]" --text "A > 400; fbrem < 20%"
 #python studies/xtals_staggering/slices_selections.py --tag $TAG --fit --median    --name "ic_vs_iphi_Amp400_fbrem20_B1_XXX"  --add "ic_vs_iphi_2_ele2_Amp400_ele2_fbrem20_B2_XXX"  --xlabel "i#phi seed" --ylabel "ic" --text "A > 400; fbrem < 20%"
 
@@ -109,14 +111,17 @@ cp index.php /eos/home-c/camendol/www/ECALtiming/$TAG/${YEAR}/${ERA}
 #python studies/xtals_staggering/slices.py --tag $TAG --hist                 --name "ic_vs_ieta_Amp400_fbrem20_B1" --add "ic_vs_ieta_2_ele2_Amp400_ele2_fbrem20_B2"  --xlabel "i#eta seed" --ylabel "ic " --text "A > 400; fbrem < 20%"
 #python studies/xtals_staggering/slices.py --tag $TAG  --median              --name "ic_vs_ieta_Amp400_fbrem20_B1" --add "ic_vs_ieta_2_ele2_Amp400_ele2_fbrem20_B2"  --xlabel "i#eta seed" --ylabel "ic " --text "A > 400; fbrem < 20%"
 #python studies/xtals_staggering/slices_eras.py --tag $TAG  --median              --name "ic_vs_ieta_Amp400_fbrem20_B1" --add "ic_vs_ieta_2_ele2_Amp400_ele2_fbrem20_B2"  --xlabel "i#eta seed" --ylabel "ic " --text "A > 400; fbrem < 20%"
+
 #
 #python studies/xtals_staggering/slices.py --tag $TAG --hist                 --name "time_vs_iphi_Amp400_fbrem20_B1_etaplus" --add "time_vs_iphi_2_ele2_Amp400_ele2_fbrem20_B2_etaplus"  --xlabel "i#phi seed" --ylabel "e arrival time [ns]" --text "A > 400; fbrem < 20%; side: #eta+"
 #python studies/xtals_staggering/slices.py --tag $TAG --hist                 --name "time_vs_iphi_Amp400_fbrem20_B1_etaplus" --add "time_vs_iphi_2_ele2_Amp400_ele2_fbrem20_B2_etaplus"  --xlabel "i#phi seed" --ylabel "e arrival time [ns]" --text "A > 400; fbrem < 20%; side: #eta+"
 #python studies/xtals_staggering/slices.py --tag $TAG --median               --name "time_vs_iphi_Amp400_fbrem20_B1_etaplus" --add "time_vs_iphi_2_ele2_Amp400_ele2_fbrem20_B2_etaplus"  --xlabel "i#phi seed" --ylabel "e arrival time [ns]" --text "A > 400; fbrem < 20%; side: #eta+"
 #python studies/xtals_staggering/slices_eras.py --tag $TAG --median               --name "time_vs_iphi_Amp400_fbrem20_B1_etaplus" --add "time_vs_iphi_2_ele2_Amp400_ele2_fbrem20_B2_etaplus"  --xlabel "i#phi seed" --ylabel "e arrival time [ns]" --text "A > 400; fbrem < 20%; side: #eta+"
+python studies/xtals_staggering/slices_eras.py --tag $TAG --median               --name "time_vs_iphi_Amp400_fbrem20_B1_etaplus"  --xlabel "i#phi seed" --ylabel "e arrival time [ns]" --text "A > 400; fbrem < 20%; side: #eta+"
 #python studies/xtals_staggering/slices.py --tag $TAG --hist                 --name "time_vs_iphi_Amp400_fbrem20_B1_etaminus" --add "time_vs_iphi_2_ele2_Amp400_ele2_fbrem20_B2_etaminus" --xlabel "i#phi seed" --ylabel "e arrival time [ns]" --text "A > 400; fbrem < 20%; side: #eta-"
 #python studies/xtals_staggering/slices.py --tag $TAG --median               --name "time_vs_iphi_Amp400_fbrem20_B1_etaminus" --add "time_vs_iphi_2_ele2_Amp400_ele2_fbrem20_B2_etaminus" --xlabel "i#phi seed" --ylabel "e arrival time [ns]" --text "A > 400; fbrem < 20%; side: #eta-"
 #python studies/xtals_staggering/slices_eras.py --tag $TAG --median               --name "time_vs_iphi_Amp400_fbrem20_B1_etaminus" --add "time_vs_iphi_2_ele2_Amp400_ele2_fbrem20_B2_etaminus" --xlabel "i#phi seed" --ylabel "e arrival time [ns]" --text "A > 400; fbrem < 20%; side: #eta-"
+python studies/xtals_staggering/slices_eras.py --tag $TAG --median               --name "time_vs_iphi_Amp400_fbrem20_B1_etaminus"  --xlabel "i#phi seed" --ylabel "e arrival time [ns]" --text "A > 400; fbrem < 20%; side: #eta-"
 #
 #python studies/xtals_staggering/slices.py --tag $TAG --hist                 --name "ic_vs_iphi_Amp400_fbrem20_B1_etaplus" --add "ic_vs_iphi_2_ele2_Amp400_ele2_fbrem20_B2_etaplus"  --xlabel "i#phi seed" --ylabel "ic" --text "A > 400; fbrem < 20%; side: #eta+"
 #python studies/xtals_staggering/slices.py --tag $TAG --median               --name "ic_vs_iphi_Amp400_fbrem20_B1_etaplus" --add "ic_vs_iphi_2_ele2_Amp400_ele2_fbrem20_B2_etaplus"  --xlabel "i#phi seed" --ylabel "ic" --text "A > 400; fbrem < 20%; side: #eta+"
@@ -127,9 +132,9 @@ cp index.php /eos/home-c/camendol/www/ECALtiming/$TAG/${YEAR}/${ERA}
 
 
 ### 2D maps
-python studies/xtals_staggering/slices.py --tag $TAG --hist   --era $ERA            --name "size_timeSeedSC1_corr_xSeedSC1_vs_ySeedSC1_Amp400_fbrem20_B1"   --ylabel "i#eta seed" --xlabel "i#phi seed" --zlabel "Events" --text "A > 400; fbrem < 20%"
-python studies/xtals_staggering/slices.py --tag $TAG --hist   --era $ERA            --name "median_timeSeedSC1_corr_xSeedSC1_vs_ySeedSC1_Amp400_fbrem20_B1" --ylabel "i#eta seed" --xlabel "i#phi seed" --zlabel "Median" --text "A > 400; fbrem < 20%"
-python studies/xtals_staggering/slices.py --tag $TAG --hist   --era $ERA            --name "effs_timeSeedSC1_corr_xSeedSC1_vs_ySeedSC1_Amp400_fbrem20_B1"   --ylabel "i#eta seed" --xlabel "i#phi seed" --zlabel "#sigma_{eff}" --text "A > 400; fbrem < 20%"
+#python studies/xtals_staggering/slices.py --tag $TAG --hist   --era $ERA            --name "size_timeSeedSC1_corr_xSeedSC1_vs_ySeedSC1_Amp400_fbrem20_B1"   --ylabel "i#eta seed" --xlabel "i#phi seed" --zlabel "Events" --text "A > 400; fbrem < 20%"
+#python studies/xtals_staggering/slices.py --tag $TAG --hist   --era $ERA            --name "median_timeSeedSC1_corr_xSeedSC1_vs_ySeedSC1_Amp400_fbrem20_B1" --ylabel "i#eta seed" --xlabel "i#phi seed" --zlabel "Median" --text "A > 400; fbrem < 20%"
+#python studies/xtals_staggering/slices.py --tag $TAG --hist   --era $ERA            --name "effs_timeSeedSC1_corr_xSeedSC1_vs_ySeedSC1_Amp400_fbrem20_B1"   --ylabel "i#eta seed" --xlabel "i#phi seed" --zlabel "#sigma_{eff}" --text "A > 400; fbrem < 20%"
 
 
 

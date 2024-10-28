@@ -79,64 +79,56 @@ parser.add_argument('--name', dest='name', help='plot name', default=None)
 
 args = parser.parse_args()
 
-globselection = "BB_Run1Sel_ee"
-locselection = "B1_Run1Sel_e1"
+globselection = "BBl_Run1Sel_ee"
+locselection = "B1_Run1Sel_e1_HighR9_e1"
 
 if args.glob: 
-    name = "deltaT_vs_effA_ee_"+globselection
-    ename = "effs_deltaT_ee_vs_effA_ee_"+globselection
+    names = ["deltaT_vs_effA_ee_"+globselection, "deltaT_recal_vs_effA_ee_"+globselection]
+    enames = ["effs_deltaT_ee_vs_effA_ee_"+globselection, "effs_deltaT_ee_recal_vs_effA_ee_"+globselection]
 else:
-    name = "deltaT_vs_effA_e1_"+locselection
-    ename = "effs_deltaT_e1_vs_effA_e1_"+locselection
+    name = "deltaT_vs_effA_e1_seeds_"+locselection 
+    ename = "effs_deltaT_e1_seeds_vs_effA_e1_seeds_"+locselection
 if args.year:
     years = [args.year]
 else:
     years = ["2016", "2017", "2018"]
 
 mg = TMultiGraph()
-
-
-col_year = {
-    "2016": [ROOT.kBlue,  ROOT.kBlue+1],
-    "2017": [ROOT.kRed , ROOT.kRed +1],
-    "2018": [ROOT.kGreen,  ROOT.kGreen+1]
+leg = ["ECALELF", "ECALELF+rECAL"]
+col = {
+    "deltaT_vs_effA_ee_"+globselection: [ROOT.kBlack,  ROOT.kGray+2],
+    "deltaT_recal_vs_effA_ee_"+globselection: [ROOT.kBlue , ROOT.kBlue +1]
 }   
 
 ADC2GEV_E = 0.060
 ADC2GEV_B = 0.035
-
+year = str(args.year)
 c = ROOT.TCanvas("c","c",700,600)
 c.SetLeftMargin(0.17)
 c.Draw()
 ymax = 0
 ymin = 1
 legend = TLegend(0.17, 0.72, 0.89, 0.89)
-for year in years:
-    if year=="2018" and args.early: 
-        inFile = TFile.Open("plots/"+args.tag+"/"+year+"/sigma_"+name+"_Early2018.root")
-    elif  year=="2018" and args.late:
-        inFile = TFile.Open("plots/"+args.tag+"/"+year+"/sigma_"+name+"_Late2018.root")
-    elif year=="2018":
-        inFile = TFile.Open("plots/"+args.tag+"/"+year+"/sigma_"+name+".root")
-    else: 
-        inFile = TFile.Open("plots/"+args.tag+"/"+year+"/sigma_"+name+".root")
-    print ("plots/"+args.tag+"/"+year+"/sigma_"+name+".root")
+for iname, name in enumerate(names):
+    inFile = TFile.Open("plots/"+args.tag+"/"+str(year)+"/sigma_"+name+".root")
+
+    print ("plots/"+args.tag+"/"+str(year)+"/sigma_"+name+".root")
     if not args.effs: 
         thisGraph = inFile.Get("Graph")
     else:
-        print(ename)
+        print(enames[iname])
         inFile.ls()
-        thisGraph = inFile.Get(ename)
+        thisGraph = inFile.Get(enames[iname])
         
-    thisGraph.SetLineColor(col_year[year][1])
-    thisGraph.SetMarkerColor(col_year[year][1])
+    thisGraph.SetLineColor(col[name][1])
+    thisGraph.SetMarkerColor(col[name][1])
     funcname = "func"
     if args.effs: funcname = "func_effs"
     thisFunc = thisGraph.GetFunction(funcname)
-    thisFunc.SetLineColor(col_year[year][0])
+    thisFunc.SetLineColor(col[name][0])
     Nlabel = "N = {:.3f} #pm {:.3f} ns".format(thisFunc.GetParameter(0), thisFunc.GetParError(0))
     Clabel = "C = {:.3f} #pm {:.3f} ns".format(thisFunc.GetParameter(1), thisFunc.GetParError(1))
-    legend.AddEntry(thisGraph, "{}, {}, {}".format(year, Nlabel, Clabel))
+    legend.AddEntry(thisGraph, "{}, {}, {}".format(leg[iname], Nlabel, Clabel))
     this_ymax = thisGraph.GetHistogram().GetMaximum()
     this_ymin = thisGraph.GetHistogram().GetMinimum()
     ymax = max(ymax, this_ymax)
@@ -167,16 +159,16 @@ if args.logy:
     mg.GetYaxis().SetMoreLogLabels()
     mg.GetYaxis().SetTitleOffset(1.9)
 legend.SetBorderSize(0)
-legend.SetTextSize(0.03)
+legend.SetTextSize(0.025)
 legend.Draw("same")
 c.SetGrid()
 gStyle.SetGridStyle(2)
 gStyle.SetGridColor(ROOT.kGray)
 
-latex = Text(gPad, 0.88,0.65, "#scale[1.2]{#bf{CMS}} #font[50]{Preliminary}", align = 33)
-latex = Text(gPad, 0.88,0.60,"Run2 Data (13 TeV)", align = 33,size = 0.03)
+#latex = Text(gPad, 0.88,0.65, "#scale[1.2]{#bf{CMS}} #font[50]{Preliminary}", align = 33)
+#latex = Text(gPad, 0.88,0.60,"Run2 Data (13 TeV)", align = 33,size = 0.03)
 if args.glob: latex = Text(gPad, 0.88,0.55,"Z#rightarrow ee events, EB", align = 33,size = 0.03)
-if not args.loc: latex = Text(gPad, 0.88,0.55,"Same cluster, EB", align = 33,size = 0.03)
+if args.loc: latex = Text(gPad, 0.88,0.55,"Same cluster, EB", align = 33,size = 0.03)
 
 latex = Text(gPad, 0.88,0.48,"#sigma = #frac{N}{A_{eff}} #font[62]{#oplus} #sqrt{2}C", align = 33,size = 0.04)
 
@@ -195,5 +187,5 @@ c.Modified()
 input()
 if args.early: name = name+"_Early2018" 
 if args.late: name = name+"_Late2018"
-c.SaveAs("plots/"+args.tag+"/allYears/sigma_"+name+".png")
-c.SaveAs("plots/"+args.tag+"/allYears/sigma_"+name+".pdf")
+c.SaveAs("plots/"+args.tag+"/2018/sigma_"+name+".png")
+c.SaveAs("plots/"+args.tag+"/2018/sigma_"+name+".pdf")

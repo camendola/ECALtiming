@@ -1,4 +1,4 @@
-if [[ $is_setup_set != 1 ]]
+Bif [[ $is_setup_set != 1 ]]
 then
     if [[ "$HOSTNAME" == *"iclust"* ]]
     then
@@ -16,6 +16,11 @@ then
 	
     elif [[ "$HOSTNAME" == *"lxplus"* ]]
     then 
+	export is_setup_set=1
+	source /cvmfs/sft.cern.ch/lcg/views/LCG_97python3/x86_64-centos7-gcc9-opt/setup.sh
+	export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/user/c/camendol/recal/lib
+	alias python='python3.7'
+    else
 	export is_setup_set=1
 	source /cvmfs/sft.cern.ch/lcg/views/LCG_97python3/x86_64-centos7-gcc9-opt/setup.sh
 	export PYTHONPATH=$PYTHONPATH:/afs/cern.ch/user/c/camendol/recal/lib

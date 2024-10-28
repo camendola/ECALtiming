@@ -139,6 +139,58 @@ def B2(df):
     mask = abs(df.etaSCEle2) < EBthreshold
     return df[mask]
 
+def SM1(df):
+    mask = (df.ismSeedSC1 == 1)
+    return df[mask]
+def SM2(df):
+    mask = (df.ismSeedSC1 == 2)
+    return df[mask]
+def SM3(df):
+    mask = (df.ismSeedSC1 == 3)
+    return df[mask]
+def SM4(df):
+    mask = (df.ismSeedSC1 == 4)
+    return df[mask]
+def SM5(df):
+    mask = (df.ismSeedSC1 == 5)
+    return df[mask]
+def SM6(df):
+    mask = (df.ismSeedSC1 == 6)
+    return df[mask]
+def SM7(df):
+    mask = (df.ismSeedSC1 == 7)
+    return df[mask]
+def SM8(df):
+    mask = (df.ismSeedSC1 == 8)
+    return df[mask]
+
+def ele2_SM1(df):
+    mask = (df.ismSeedSC2 == 1)
+    return df[mask]
+def ele2_SM2(df):
+    mask = (df.ismSeedSC2 == 2)
+    return df[mask]
+def ele2_SM3(df):
+    mask = (df.ismSeedSC2 == 3)
+    return df[mask]
+def ele2_SM4(df):
+    mask = (df.ismSeedSC2 == 4)
+    return df[mask]
+def ele2_SM5(df):
+    mask = (df.ismSeedSC2 == 5)
+    return df[mask]
+def ele2_SM6(df):
+    mask = (df.ismSeedSC2 == 6)
+    return df[mask]
+def ele2_SM7(df):
+    mask = (df.ismSeedSC2 == 7)
+    return df[mask]
+def ele2_SM8(df):
+    mask = (df.ismSeedSC2 == 8)
+    return df[mask]
+
+
+
 
 # clean
 def clean_ee(df):

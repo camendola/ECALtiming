@@ -63,7 +63,7 @@ def geticEB(ieta, iphi, positiveZ):
 def getSM(iphi, positiveZ):
     crystalsInPhi = 20  # per SM
     id = (iphi - 1) / crystalsInPhi + 1
-    id = id.astype("int")
+    id = id #.astype("int")
     return np.where(positiveZ, id, id + 18)
 
 
@@ -147,10 +147,9 @@ def appendIdxs(df, pair_idx, seed="Seed"):
 
     detID = "rawID" + seed + "SC" + pair_idx
     ecal = ecalic.icCMS().iov
-    print(df)
+
     ecal = ecal.reset_index().set_index(["cmsswId"])
-    print(ecal)
-    print(df.set_index([detID]).index)
+
     df["iTT" + seed + "SC" + pair_idx] = df.set_index([detID]).index.map(ecal.ccu)
 
     df["iX" + seed + "SC" + pair_idx] = df.set_index([detID]).index.map(ecal["ix"])

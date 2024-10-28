@@ -138,6 +138,7 @@ for i, era in enumerate(eras):
 ymax = max([g.GetHistogram().GetMaximum() for g in eragraph.values()])
 ymin = min([g.GetHistogram().GetMinimum() for g in eragraph.values()])
 
+
 mg      = ROOT.TMultiGraph()
 
 
@@ -162,10 +163,12 @@ for g in mg.GetListOfGraphs():
 ROOT.gStyle.SetOptStat(0)
 Frame(ROOT.gPad)
 
-mg.Draw("ap")
 
-mg.SetMaximum(ymax*3)
-mg.SetMinimum(ymin)
+
+mg.Draw("ap")
+mg.SetMaximum(ymax + abs(ymax*3))
+mg.SetMinimum(ymin - abs(ymin/2))
+
     
 legend.Draw("same") 
 if args.text:

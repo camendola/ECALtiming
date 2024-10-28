@@ -196,6 +196,10 @@ if args.extra:
         )
     )
 
+df_chain = df_chain.assign(
+    deltaT_ee_corr_TOF=df_chain["timeSeedSC1_corr_TOF"] - df_chain["timeSeedSC2_corr_TOF"],
+    #deltaT_e1_corr_TOF=df_chain["timeSeedSC1_corr_TOF"] - df_chain["timeSecondToSeedSC1_corr_TOF"]
+)
 
 tag = ""
 if args.tag:

@@ -60,7 +60,7 @@ if not os.path.isfile(file_extra):
     sys.exit()
 
 df = load_data.load_file(file, "selected", branches)
-print(df)
+
 
 initial_size = df.shape[0]
 print(str(float(process.memory_info().rss) / 1000000))  #
@@ -75,9 +75,19 @@ for df_extra_chunk in tqdm(
         file_extra, "extraCalibTree", branches_extra, entrysteps=100000, flatten=False
     )
 ):
+
     df_extra_chunk = df_extra_chunk[
         df_extra_chunk["eventNumber"].isin(event_list)
     ]  # .sort_values(by=["eventNumber"]).reset_index()
+    
+    df_size1 = df_extra_chunk[].rawIdRecHitSCEle1.apply(
+        lambda x: len(x))
+    print(df_size1)
+    print(df_size1.mean(), df_size1.std(), df_size1.max())
+    df_size2 = df_extra_chunk.rawIdRecHitSCEle2.apply(
+        lambda x: len(x))
+    print(df_size2)
+    print(df_size2.mean(), df_size2.std(), df_size2.max())
     df_extratime_chunk = df_extra_chunk["eventNumber"].astype("uint32")
     df_extra_chunk = df_extra_chunk.drop(columns=["eventNumber"])
 
@@ -320,7 +330,7 @@ gc.collect()
 
 outfile_name = file.replace(".root", "_extra.root")
 print("@@@ Saving output file ", outfile_name)
-df.to_root(outfile_name, key="extended", mode="w")  # recreate mode
+#df.to_root(outfile_name, key="extended", mode="w")  # recreate mode
 
 final_size = df.shape[0]
 if initial_size > final_size:

@@ -134,7 +134,8 @@ args = parser.parse_args()
 
 sel_colors = [
     ROOT.kBlack,
-    ROOT.kSpring
+    ROOT.kBlue,
+    ROOT.kSpring, 
     ]
 
 #sel_colors = [
@@ -150,6 +151,7 @@ tag = ""
 if args.tag: tag = "_"+args.tag
 
 inFile = ROOT.TFile.Open("plots/"+args.tag+"/outPlot_"+args.year+args.era+".root")
+inFile_green = ROOT.TFile.Open("plots/2021_3_16_laser_g_ref316995/outPlot_"+args.year+args.era+".root")
 selections = [item for item in args.sel.split(',')]
 varnames = [item for item in args.name.split(',')]
 if args.legend:
@@ -163,6 +165,7 @@ for sel in selections:
     for name in varnames:
         print(name+"_"+sel)
         plot.append(inFile.Get(name+"_"+sel))
+        if "recal" in name or "laser" in name: (plot.append(inFile_green.Get(name+"_"+sel)))
 print (plot)
 
 if isinstance(plot[0], ROOT.TH1F):
@@ -226,8 +229,8 @@ elif isinstance(plot[0], ROOT.TGraph):
         gr.SetTitle("")
         gr.SetMarkerStyle(8)
         gr.SetMarkerColor(ROOT.kBlue)
-        gr.SetMaximum(0.5)
-        gr.SetMinimum(0.2)
+        gr.SetMaximum(0.8)
+        gr.SetMinimum(0.1)
         if args.xlabel: gr.GetXaxis().SetTitle(args.xlabel)
         if args.ylabel: gr.GetYaxis().SetTitle(args.ylabel)
         if args.showeras: runlines, runlabels = DrawEras(gPad, args.year)
@@ -293,5 +296,5 @@ for i in varnames:
 if plotname.startswith("_"): plotname = plotname[1:]
 if selname.startswith("_"):  selname = selname[1:]
 
-c.SaveAs("plots/"+args.tag+"/"+args.year+args.era+"/"+plotname+"_"+selname+".png")
-c.SaveAs("plots/"+args.tag+"/"+args.year+args.era+"/"+plotname+"_"+selname+".pdf")
+c.SaveAs("plots/"+args.tag+"/"+args.year+args.era+"/"+plotname+"_"+selname+"_green.png")
+c.SaveAs("plots/"+args.tag+"/"+args.year+args.era+"/"+plotname+"_"+selname+"_green.pdf")

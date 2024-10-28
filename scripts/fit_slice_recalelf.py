@@ -61,7 +61,6 @@ def Text(gPad, x, y, text, size = 0.03, font=42, align = 11):
 parser = argparse.ArgumentParser(description='Command line parser of plotting options')
 
 parser.add_argument('--year', dest='year', help='which year', default=2016)
-parser.add_argument('--era', dest='era', help='which era', default="")
 parser.add_argument('--tag', dest='tag', help='tag root file', default=None)
 parser.add_argument('--sel', dest='sel', help='selection(s)', default="BB_clean_ee")
 parser.add_argument('--skip', dest='skip', help='skip first bins', type = int, default=0)
@@ -82,29 +81,21 @@ parser.add_argument('--ylabel', dest='ylabel', help='ylabel', default=None)
 
 args = parser.parse_args()
 
-inFile = ROOT.TFile.Open("plots/"+args.tag+"/outPlot_"+args.year+args.era+".root")
+inFile = ROOT.TFile.Open("plots/"+args.tag+"/outPlot_"+args.year+".root")
 
 name = "deltaT_vs_effA_e1"
 N = 3.30413e+01
 C = 9.27409e-02
-#if args.year == "2018":
-#    N =  5.36645e+01
-#    C =  1.89872e-01
+if args.year == "2018":
+    N =  5.36645e+01
+    C =  1.89872e-01
 
 if args.glob: 
 	name = "deltaT_vs_effA_ee"
-print(name+"_"+args.sel)
-
 inFile.ls()
 histo = inFile.Get(name+"_"+args.sel)
-histo.Sumw2()
-if not args.glob:
-    histo2 = inFile.Get((name+"_"+args.sel).replace("e1","e2").replace("B1", "B2"))
-    histo2.Sumw2()
-    histo.Add(histo2)
 
-
-
+print(name+"_"+args.sel)
 sigma = []
 sigma_error = []
 mean = []
@@ -137,8 +128,7 @@ for i in range(1, histo.GetNbinsX()+1):
     #    x0 = mean[-1]
     #    width = 3*sigma[-1]
     f_gaus = TF1("f_gaus","gaus",x0 - width,x0 + width)
-    if i > 1 :
-        f_gaus.SetParameter(2, sigma[-1])
+    
 
     hY.Fit(f_gaus, "R")
     if args.v:
@@ -150,7 +140,7 @@ for i in range(1, histo.GetNbinsX()+1):
     #sigma.append(gaus.GetParameter(2))
     mean.append(f_gaus.GetParameter(1))
     sigma.append(f_gaus.GetParameter(2))
-    sigma_error.append(f_gaus.GetParError(2)/600)
+    sigma_error.append(f_gaus.GetParError(2)/2)
 print(sigma)
 
 
@@ -180,7 +170,7 @@ if args.logy:
 
 graph.SetTitle("")
 Frame(gPad)
-yrlabel = TextAuto(gPad, args.year+args.era, align = 31)
+yrlabel = TextAuto(gPad, args.year, align = 31)
 last = histo.GetNbinsX() - 1 
 
 func = TF1("func","sqrt(([0]/(x))^2 + 2*([1]^2))", x[0]-x_low[0], x[last]+x_high[last])
@@ -210,8 +200,7 @@ hfit.GetXaxis().SetBinLabel(4, "C_error")
 if (args.effs):
     ename = "effs_deltaT_e1_vs_effA_e1"
     if args.glob: 
-        #ename = "effs_deltaT_ee_vs_effA_ee"
-        ename = "effs_deltaT_ee_corr_TOF_ee_vs_effA_ee"
+        ename = "effs_deltaT_ee_vs_effA_ee"
 
     eff_s_graph = inFile.Get(ename+"_"+args.sel)
 
@@ -254,15 +243,15 @@ if (args.effs):
 
 
 
-os.makedirs("plots/"+args.tag+"/"+args.year+args.era, exist_ok =True)
-outFile = TFile.Open("plots/"+args.tag+"/"+args.year+args.era+"/sigma_"+name+"_"+args.sel+".root", "recreate")
+os.makedirs("plots/"+args.tag+"/"+args.year, exist_ok =True)
+outFile = TFile.Open("plots/"+args.tag+"/"+args.year+"/sigma_"+name+"_"+args.sel+".root", "recreate")
 outFile.cd()
 graph.Write()
 hfit.Write()
 if(args.effs): eff_s_graph.Write()
 
-c.SaveAs("plots/"+args.tag+"/"+args.year+args.era+"/sigma_"+name+"_"+args.sel+".png")
-c.SaveAs("plots/"+args.tag+"/"+args.year+args.era+"/sigma_"+name+"_"+args.sel+".pdf")
+c.SaveAs("plots/"+args.tag+"/"+args.year+"/sigma_"+name+"_"+args.sel+".png")
+c.SaveAs("plots/"+args.tag+"/"+args.year+"/sigma_"+name+"_"+args.sel+".pdf")
 if(args.effs):
-    c2.SaveAs("plots/"+args.tag+"/"+args.year+args.era+"/effs_sigma_"+name+"_"+args.sel+".png")
-    c2.SaveAs("plots/"+args.tag+"/"+args.year+args.era+"/effs_sigma_"+name+"_"+args.sel+".pdf")
+    c2.SaveAs("plots/"+args.tag+"/"+args.year+"/effs_sigma_"+name+"_"+args.sel+".png")
+    c2.SaveAs("plots/"+args.tag+"/"+args.year+"/effs_sigma_"+name+"_"+args.sel+".pdf")
